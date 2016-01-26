@@ -35,7 +35,7 @@ namespace Meyn.TestLink
     /// this attribute is used for the various exporter adapters such as the Gallio and the NUnit test frameworks
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class TestLinkFixtureAttribute : System.Attribute
+    public class TestLinkFixtureAttribute : System.Attribute, ICloneable
     {
         private string buildName = null;
         /// <summary>
@@ -236,6 +236,22 @@ namespace Meyn.TestLink
                 return Node.Attributes["value"].Value;
             else
                 return existingValue;
+        }
+
+        public object Clone()
+        {
+            TestLinkFixtureAttribute tlfa = new TestLinkFixtureAttribute();
+            tlfa.devKey = devKey;
+            tlfa.configFile = configFile;
+            tlfa.projectName = projectName;
+            tlfa.testPlan = testPlan;
+            tlfa.testSuite = testSuite;
+            tlfa.url = url;
+            tlfa.buildName = buildName;
+
+            tlfa.userId = userId;
+
+            return tlfa;
         }
     }
 }

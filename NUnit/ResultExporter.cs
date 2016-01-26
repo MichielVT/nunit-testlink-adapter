@@ -53,6 +53,8 @@ namespace Meyn.TestLink.NUnitExport
         TestLinkAdaptor adaptor = new TestLinkAdaptor();
 
         private string currentTestOutput  = "";
+        private const string defaultConfigFile = "tlinkconfig-default.xml";
+        private TestLinkFixtureAttribute defaultTlfa;
 
         /// <summary>
         /// uses the Nunit trace facility. To set the trace levels
@@ -60,7 +62,15 @@ namespace Meyn.TestLink.NUnitExport
         /// </summary>
         static Logger log = InternalTrace.GetLogger(typeof(TestLinkAddOn));
 
- 
+        public ResultExporter()
+        {
+            defaultTlfa = new TestLinkFixtureAttribute();
+            defaultTlfa.ConfigFile = defaultConfigFile;
+            if (!(defaultTlfa.ConsiderConfigFile(Directory.GetCurrentDirectory())))
+            {
+                defaultTlfa = null;
+            }
+        }
 
         #region EventListener Overrides
         public void RunStarted(string name, int testCount)
@@ -177,11 +187,19 @@ namespace Meyn.TestLink.NUnitExport
                 }
                 else
                 {
-                    if (lastTestFixtureName != testFixtureName) // do this warning once per test fixture
+                    TestLinkFixtureAttribute tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
+
+                    if (tlfa != null)
                     {
-                        log.Warning(string.Format("Test fixture '{0}' has no TestLinkFixture attribute",
-                            testFixtureName));
-                        lastTestFixtureName = testFixtureName;
+                        if (tlfa.TestSuite == null)
+                        {
+                            /* if testuite is not defined in default config file, take the Fullname as Testsuite name */
+                            tlfa.TestSuite = extractTestFixture(result.FullName);
+                        }
+                       
+
+                        reportResult(result, tlfa);
+
                     }
                     log.Warning(string.Format("Failed to record test case '{0}'", result.Name));
                 }
@@ -330,7 +348,12 @@ namespace Meyn.TestLink.NUnitExport
                     TestLinkFixtureAttribute tlfa = attribute as TestLinkFixtureAttribute;
                     if (tlfa != null)
                     {
-                        tlfa.ConsiderConfigFile(Path.GetDirectoryName(path)); // trigger the attribute to look for a config file which may overload individual items
+                        if (!tlfa.ConsiderConfigFile(Path.GetDirectoryName(path)))
+                        {
+                            tlfa.ConfigFile = defaultConfigFile;
+                            /* try again with default config file */
+                            tlfa.ConsiderConfigFile(Path.GetDirectoryName(path));
+                        }
                         log.Info(string.Format("Found fixture attribute for test fixture: {0}", t.FullName));
                         if (fixtures.ContainsKey(t.FullName))
                             fixtures[t.FullName] = tlfa;
