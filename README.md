@@ -18,3 +18,8 @@ The included testbench (to test the testlink API) requires an instance running o
     * One platform called "OS/X"
     * One platform called "Windows 95"
     * Both platforms have to be added to the testplan
+    * One testsuite called "Handheld devices" with following two tests added
+        * "10 G shock"
+        * "Gamma Ray Storm"
+ 
+Note: So far only the smoke tests are available
