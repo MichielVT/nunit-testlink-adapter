@@ -1234,10 +1234,18 @@ namespace Meyn.TestLink
             if (handleErrorMessage(o, 7008))
                 return Result; // empty list
             XmlRpcStruct response = o as XmlRpcStruct;
-            foreach  (XmlRpcStruct data in response.Values)
+            try
+            {
+                foreach (XmlRpcStruct data in response.Values)
                 {
                     Result.Add(new TestSuite(data));
-                }           
+                }
+            }
+            catch (Exception)
+            {
+                Result.Add(new TestSuite(response));
+            }
+
             return Result;
         }
         /// <summary>
