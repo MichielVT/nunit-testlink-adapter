@@ -37,6 +37,15 @@ namespace Meyn.TestLink
     [AttributeUsage(AttributeTargets.Class)]
     public class TestLinkFixtureAttribute : System.Attribute
     {
+        private string buildName = null;
+        /// <summary>
+        /// the buildname to be used
+        /// </summary>
+        public string Buildname
+        {
+            get { return buildName; }
+            set { buildName = value; }
+        }
         private string url;
 
         /// <summary>
@@ -144,6 +153,7 @@ namespace Meyn.TestLink
                 && (other.testPlan.Equals(testPlan))
                 && (other.testSuite.Equals(testSuite))
                 && (other.url.Equals(url))
+                && (other.buildName.Equals(buildName))
                 && (other.userId.Equals(userId)));
         }
 
@@ -155,6 +165,7 @@ namespace Meyn.TestLink
                  ^ testPlan.GetHashCode()
                  ^ testSuite.GetHashCode()
                  ^ url.GetHashCode()
+                 ^ buildName.GetHashCode()
                  ^ userId.GetHashCode());
         }
 
@@ -200,6 +211,7 @@ namespace Meyn.TestLink
             platformName = updateAttributeFromConfigFile(doc, platformName,"PlatformName");
             devKey = updateAttributeFromConfigFile(doc, devKey, "DevKey");
             
+            buildName = updateAttributeFromConfigFile(doc, buildName, "BuildName");
             return true;
         }
 

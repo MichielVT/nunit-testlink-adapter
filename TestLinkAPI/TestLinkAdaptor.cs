@@ -76,6 +76,7 @@ namespace Meyn.TestLink
         private TestProject currentProject;
 
         private int testSuiteId;
+        private int testBuildId;
         private int testPlanId;
         private int testProjectId;
         private string platformName = string.Empty;
@@ -170,7 +171,9 @@ namespace Meyn.TestLink
             bool devKeyDifferent = true;
             bool projectDifferent = true;
             bool planDifferent = true;
-            bool testSuiteDifferent = true;            
+            bool testSuiteDifferent = true;
+            bool testBuildDifferent = true;            
+
 
             if (newData == null)
             {
@@ -196,7 +199,11 @@ namespace Meyn.TestLink
                             if (connectionData.TestPlan == newData.TestPlan)
                             {
                                 planDifferent = false;
-                                testSuiteDifferent = connectionData.TestSuite != newData.TestSuite;
+                                if (connectionData.TestSuite == newData.TestSuite)
+                                {
+                                    testSuiteDifferent = false;
+                                    testBuildDifferent = connectionData.Buildname != newData.Buildname;
+                                }
                                 
                             }
                         }
@@ -214,7 +221,7 @@ namespace Meyn.TestLink
 
             
             if (basicConnectionValid)
-                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent);
+                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent, testBuildDifferent);
             
         }
         /// <summary>
@@ -248,13 +255,14 @@ namespace Meyn.TestLink
         /// <param name="newTestPlan"></param>
         /// <param name="newTestSuite"></param>
         /// <returns>true if data have been set up successfully</returns>
-        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite)
+        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite, bool newTestBuild)
         {
             if (basicConnectionValid == false)
             {
                 testProjectId = 0;
                 testPlanId = 0;
                 testSuiteId = 0;
+                testBuildId = 0;
                 return false;
             }
             if (newProject)
@@ -311,6 +319,45 @@ namespace Meyn.TestLink
             else if (testSuiteId == 0) // it was wrong and hasn't changed
                 return false;
 
+            if (newTestBuild)
+            {
+                List<Build> builds;
+                Build buildToBeUsed = null;
+
+                builds = proxy.GetBuildsForTestPlan(testPlanId);
+                if ((connectionData.Buildname != null) && (connectionData.Buildname != ""))
+                {
+                    foreach (Build b in builds)
+                    {
+                        if (b.name == connectionData.Buildname)
+                        {
+                            testBuildId = b.id;
+                            buildToBeUsed = b;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    /* use latest build */
+                    testBuildId = builds[builds.Count - 1].id;
+                    buildToBeUsed = builds[builds.Count - 1];
+                    Console.WriteLine("Using default/latest build: " + buildToBeUsed.name);
+                }
+                if (buildToBeUsed == null)
+                {
+                    Console.WriteLine("Build " + connectionData.Buildname + " not found!");
+                    return false;
+                }
+                else if (!buildToBeUsed.active || !buildToBeUsed.is_open)
+                {
+                    Console.WriteLine("Build " + connectionData.Buildname + " not active/open!");
+                    return false;
+                }
+
+            }
+            else if (testBuildId == 0) // it was wrong and hasn't changed
+                return false;
            
             return true;
         }
@@ -324,14 +371,27 @@ namespace Meyn.TestLink
         private int GetTestSuiteId(int projectId, string testSuiteName)
         {
             int testSuiteId = 0;
+            string[] suites = testSuiteName.Split(new char[] { '.' });
             List<Meyn.TestLink.TestSuite> testSuites = proxy.GetFirstLevelTestSuitesForTestProject(projectId); //GetTestSuitesForTestPlan(testPlanId);
-            // testsuite must exist. Currently no way of creating them
-            foreach (Meyn.TestLink.TestSuite ts in testSuites)
-                if (ts.name == testSuiteName)
+
+            for (int i = 0; i < suites.Length; i++)
+            {
+                testSuiteId = 0;
+                // testsuite must exist. Currently no way of creating them
+                foreach (Meyn.TestLink.TestSuite ts in testSuites)
                 {
-                    testSuiteId = ts.id;
+                    if (ts.name == suites[i])
+                    {
+                        testSuiteId = ts.id;
+                        break;
+                    }
+                }
+                if (testSuiteId == 0)
+                {
                     break;
                 }
+                testSuites = proxy.GetTestSuitesForTestSuite(testSuiteId);
+            }
             return testSuiteId;
         }
         #endregion
