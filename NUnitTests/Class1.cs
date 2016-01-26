@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using Meyn.TestLink;
@@ -9,8 +8,7 @@ namespace nunitTests
 {
     [TestFixture]
     [TestLinkFixture(
-    ConfigFile = "tlinkconfig.xml",
-    TestSuite = "nunitAddOnSampleTests")]
+    ConfigFile = "tlinkconfig.xml")]
     public class Class1Tests
     {
         [Test]
