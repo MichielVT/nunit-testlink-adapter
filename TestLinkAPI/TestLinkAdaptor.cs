@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-//using log4net;
+using log4net;
 
 namespace Meyn.TestLink
 {
@@ -39,7 +39,13 @@ namespace Meyn.TestLink
     public class TestLinkAdaptor
     {
 
-        //private static readonly ILog log = LogManager.GetLogger(typeof(TestLinkAdaptor));
+        private readonly ILog log;
+
+
+        public TestLinkAdaptor(ILog logger)
+        {
+            log = logger;
+        }
 
         private TestLinkFixtureAttribute connectionData;
 
@@ -178,7 +184,7 @@ namespace Meyn.TestLink
 
             if (newData == null)
             {
-                //log.Error("No TestLinkFixture detected");
+                log.Error("No TestLinkFixture detected");
                 basicConnectionValid = false;
                 projectDataValid = false;
                 connectionData = null;
@@ -243,7 +249,7 @@ namespace Meyn.TestLink
             catch (TestLinkException tlex)
             {
                 lastException = tlex;
-                Console.WriteLine("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, url);
+                log.ErrorFormat("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, url);
                 return false;
             }
             return true;
@@ -282,7 +288,7 @@ namespace Meyn.TestLink
                 {
                     testPlanId = 0;
                     testSuiteId = 0;
-                    Console.WriteLine("Test Project '{0}' was not found in TestLink", connectionData.ProjectName);
+                    log.ErrorFormat("Test Project '{0}' was not found in TestLink", connectionData.ProjectName);
                     return false;
                 }
             }
@@ -301,7 +307,7 @@ namespace Meyn.TestLink
                 if (testPlanId == 0)
                 {
                     testSuiteId = 0;
-                    Console.WriteLine("Test plan '{0}' was not found in project '{1}'", connectionData.TestPlan, connectionData.ProjectName);
+                    log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", connectionData.TestPlan, connectionData.ProjectName);
                     return false;
                 }
             }
@@ -313,7 +319,7 @@ namespace Meyn.TestLink
                 testSuiteId = GetTestSuiteId(testProjectId, connectionData.TestSuite);
                 if (testSuiteId == 0)
                 {
-                    Console.WriteLine("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
+                    log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
                     return false;
                 }
             }
@@ -343,16 +349,16 @@ namespace Meyn.TestLink
                     /* use latest build */
                     testBuildId = builds[builds.Count - 1].id;
                     buildToBeUsed = builds[builds.Count - 1];
-                    Console.WriteLine("Using default/latest build: " + buildToBeUsed.name);
+                    log.Debug("Using default/latest build: " + buildToBeUsed.name);
                 }
                 if (buildToBeUsed == null)
                 {
-                    Console.WriteLine("Build " + connectionData.Buildname + " not found!");
+                    log.Error("Build " + connectionData.Buildname + " not found!");
                     return false;
                 }
                 else if (!buildToBeUsed.active || !buildToBeUsed.is_open)
                 {
-                    Console.WriteLine("Build " + connectionData.Buildname + " not active/open!");
+                    log.Error("Build " + connectionData.Buildname + " not active/open!");
                     return false;
                 }
 

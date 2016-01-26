@@ -30,6 +30,11 @@ using NUnit.Core.Extensibility;
 using NUnit.Core;
 using System.Reflection;
 using System.IO;
+using log4net;
+using log4net.Repository.Hierarchy;
+using log4net.Core;
+using log4net.Appender;
+using log4net.Layout;
 
 namespace Meyn.TestLink.NUnitExport
 {
@@ -50,7 +55,7 @@ namespace Meyn.TestLink.NUnitExport
         /// <summary>
         ///  handles all comms to Testlink
         /// </summary>
-        TestLinkAdaptor adaptor = new TestLinkAdaptor();
+        TestLinkAdaptor adaptor;
 
         private string currentTestOutput  = "";
         private const string defaultConfigFile = "tlinkconfig-default.xml";
@@ -60,10 +65,33 @@ namespace Meyn.TestLink.NUnitExport
         /// uses the Nunit trace facility. To set the trace levels
         /// you need to modify the nunit-console.exe.config file
         /// </summary>
-        static Logger log = InternalTrace.GetLogger(typeof(TestLinkAddOn));
+        private readonly ILog log;
+
+        private void SetupLogger()
+        {
+            Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
+            PatternLayout patternLayout = new PatternLayout();
+            patternLayout.ConversionPattern = "%date [%thread] %-5level [%F:%L] - %message%newline";
+            patternLayout.ActivateOptions();
+            RollingFileAppender roller = new RollingFileAppender();
+            roller.AppendToFile = false;
+            roller.File = @"ResultExporterLog.txt";
+            roller.Layout = patternLayout;
+            roller.MaxSizeRollBackups = 5;
+            roller.MaximumFileSize = "1GB";
+            roller.RollingStyle = RollingFileAppender.RollingMode.Size;
+            roller.StaticLogFileName = true;
+            roller.ActivateOptions();
+            hierarchy.Root.AddAppender(roller);
+            hierarchy.Root.Level = Level.All;
+            hierarchy.Configured = true;
+        }
 
         public ResultExporter()
         {
+            SetupLogger();
+            log = LogManager.GetLogger(typeof(TestLinkAdaptor));
+            adaptor = new TestLinkAdaptor(log);
             defaultTlfa = new TestLinkFixtureAttribute();
             defaultTlfa.ConfigFile = defaultConfigFile;
             if (!(defaultTlfa.ConsiderConfigFile(Directory.GetCurrentDirectory())))
@@ -204,15 +232,14 @@ namespace Meyn.TestLink.NUnitExport
                             reportResult(result, tlfa);
                         }
                     }
-                    log.Warning(string.Format("Failed to record test case '{0}'", result.Name));
+                    log.WarnFormat(string.Format("Failed to record test case '{0}'", result.Name));
                 }
             }
         }
 
         private bool IsDllPath(string path)
         {
-            log.Debug("IsDllPath:");
-            log.Debug(path);
+            log.DebugFormat("IsDllPath: '{0}'", path);
             bool result = (path.ToLower().EndsWith(".dll")); 
             return result;
         }
@@ -226,7 +253,6 @@ namespace Meyn.TestLink.NUnitExport
         private void reportResult(TestResult result, Meyn.TestLink.TestLinkFixtureAttribute tlfa)
         {
 
-            adaptor.ConnectionData = tlfa; // update the connection and retrieve  key base data from testlink
  
             try
             {
@@ -247,7 +273,7 @@ namespace Meyn.TestLink.NUnitExport
 
                 if (adaptor.ConnectionValid == false)
                 {
-                    log.Warning(string.Format("Failed to export tesult for testcase {0}", result.Name));
+                    log.WarnFormat(string.Format("Failed to export tesult for testcase {0}", result.Name));
                     Console.WriteLine("Can't export results because invalid connection");
                     return;
                 }
@@ -315,7 +341,7 @@ namespace Meyn.TestLink.NUnitExport
             if (result.status != true)
             {
                 Console.WriteLine("Failed to export Result. Testlink reported: '{0}'", result.message);
-                log.Warning(string.Format("Failed to export Result. Testlink reported: '{0}'", result.message));
+                log.WarnFormat(string.Format("Failed to export Result. Testlink reported: '{0}'", result.message));
             }
             else
              log.Info(
