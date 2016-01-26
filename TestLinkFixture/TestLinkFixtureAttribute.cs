@@ -37,6 +37,14 @@ namespace Meyn.TestLink
     [AttributeUsage(AttributeTargets.Class)]
     public class TestLinkFixtureAttribute : System.Attribute, ICloneable
     {
+        private string enabled;
+
+        public bool ExportEnabled
+        {
+            get { return (enabled.ToLower().Equals("true")); }
+            set { enabled = (value == true) ? "true" : "false"; }
+        }
+
         private string buildName = null;
         /// <summary>
         /// the buildname to be used
@@ -154,6 +162,7 @@ namespace Meyn.TestLink
                 && (other.testSuite.Equals(testSuite))
                 && (other.url.Equals(url))
                 && (other.buildName.Equals(buildName))
+                && (other.enabled.Equals(enabled))
                 && (other.userId.Equals(userId)));
         }
 
@@ -166,6 +175,7 @@ namespace Meyn.TestLink
                  ^ testSuite.GetHashCode()
                  ^ url.GetHashCode()
                  ^ buildName.GetHashCode()
+                 ^ enabled.GetHashCode()
                  ^ userId.GetHashCode());
         }
 
@@ -210,7 +220,7 @@ namespace Meyn.TestLink
             testSuite = updateAttributeFromConfigFile(doc, testSuite, "TestSuite");
             platformName = updateAttributeFromConfigFile(doc, platformName,"PlatformName");
             devKey = updateAttributeFromConfigFile(doc, devKey, "DevKey");
-            
+            enabled = updateAttributeFromConfigFile(doc, enabled, "enabled");
             buildName = updateAttributeFromConfigFile(doc, buildName, "BuildName");
             return true;
         }
@@ -248,7 +258,7 @@ namespace Meyn.TestLink
             tlfa.testSuite = testSuite;
             tlfa.url = url;
             tlfa.buildName = buildName;
-
+            tlfa.enabled = enabled;
             tlfa.userId = userId;
 
             return tlfa;

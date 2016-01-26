@@ -183,7 +183,10 @@ namespace Meyn.TestLink.NUnitExport
                 {
                     Meyn.TestLink.TestLinkFixtureAttribute tlfa = fixtures[testFixtureName];
                     //tlfa.ConsiderConfigFile(); // ensure that a config file is read in
-                    reportResult(result, tlfa);
+                    if (tlfa.ExportEnabled)
+                    {
+                        reportResult(result, tlfa);
+                    }
                 }
                 else
                 {
@@ -196,10 +199,10 @@ namespace Meyn.TestLink.NUnitExport
                             /* if testuite is not defined in default config file, take the Fullname as Testsuite name */
                             tlfa.TestSuite = extractTestFixture(result.FullName);
                         }
-                       
-
-                        reportResult(result, tlfa);
-
+                        if (tlfa.ExportEnabled)
+                        {
+                            reportResult(result, tlfa);
+                        }
                     }
                     log.Warning(string.Format("Failed to record test case '{0}'", result.Name));
                 }
