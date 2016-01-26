@@ -17,3 +17,4 @@ The included testbench (to test the testlink API) requires an instance running o
     * One testplan called "Automated Testing"
     * One platform called "OS/X"
     * One platform called "Windows 95"
+    * Both platforms have to be added to the testplan
