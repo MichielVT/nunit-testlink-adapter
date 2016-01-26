@@ -25,9 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
@@ -109,7 +108,7 @@ namespace tlinkTest
         public void GetTestCasesForTestPlan_tc()
         {
 
-            List<TestCaseFromTestPlan> idList = proxy.GetTestCasesForTestPlan(PlanCalledAutomatedTesting.id,16);
+            List<TestCaseFromTestPlan> idList = proxy.GetTestCasesForTestPlan(PlanCalledAutomatedTesting.id,17913);
 
 
             foreach (TestCaseFromTestPlan tc in idList)
@@ -330,22 +329,21 @@ namespace tlinkTest
         /// step 3 is automatic.
         /// </summary>
         [Test]
-        [MultipleAsserts]
         public void getTestCaseWithSteps()
         {
             int tcId = TestCaseIdWithSteps;
 
             Meyn.TestLink.TestCase tc = proxy.GetTestCase(tcId);             
             Assert.IsNotNull(tc);
-            Assert.AreEqual<int>(4, tc.steps.Count, " there should be 4 steps in tc named {0}. Check the Testlink DB", tc.name);
+            Assert.AreEqual(4, tc.steps.Count, " there should be 4 steps in tc named {0}. Check the Testlink DB", tc.name);
             for (int idx = 0; idx < 4; idx++)
             {
                 TestStep ts = tc.steps[idx];
-                Assert.AreEqual<int>(idx + 1, ts.step_number);
+                Assert.AreEqual(idx + 1, ts.step_number);
                 if (idx == 2)
-                    Assert.AreEqual<int>(2, ts.execution_type);
+                    Assert.AreEqual(2, ts.execution_type);
                 else
-                    Assert.AreEqual<int>(1, ts.execution_type);
+                    Assert.AreEqual(1, ts.execution_type);
                 Assert.IsNotEmpty(ts.actions);
                 Assert.IsNotEmpty(ts.expected_results);               
             }

@@ -24,10 +24,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
 using System;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
@@ -76,7 +75,6 @@ namespace tlinkTest
             Assert.IsNull(result, "Result should be null");    
         }
         [Test]
-        [MultipleAsserts]
         public void TestShouldHavePassedResult()
         {
             List<TestCaseId> testcases = proxy.GetTestCaseIDByName("passed test case", "business rules");
@@ -89,7 +87,6 @@ namespace tlinkTest
             Assert.AreEqual(TestCaseResultStatus.Pass , result.status);           
         }
         [Test]
-        [MultipleAsserts]
         public void TestShouldHavePassedResult2()
         {
             List<TestCaseId> testcases = proxy.GetTestCaseIDByName("Test Case with many results", "child test suite with test cases");

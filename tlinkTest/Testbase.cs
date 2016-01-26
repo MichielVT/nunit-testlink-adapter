@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 
 using System.Collections.Generic;
 using Meyn.TestLink;
-using MbUnit.Framework;
+using NUnit.Framework;
 
 
 namespace tlinkTest
@@ -39,12 +39,12 @@ namespace tlinkTest
     public class Testbase
     {
 
-        protected const string targetDBUrl = "http://localhost/testlink/lib/api/xmlrpc.php";
-        //protected const string targetDBUrl = "http://192.168.1.11/testlink/lib/api/xmlrpc.php";
+        protected const string targetDBUrl = "http://localhost/testlink/lib/api/xmlrpc/v1/xmlrpc.php";
+        //protected const string targetDBUrl = "http://192.168.1.11/testlink/lib/api/xmlrpc/v1/xmlrpc.php";
         /// <summary>
         /// this apiKey needs to be set whenever a new user is created.
         /// </summary>
-        protected const string apiKey = "fb37eb345a5b4f05659d5c35bb3465fd"; //on xampp
+        protected const string apiKey = "d97087aee9bc75345e42c3fa7a7b2d02"; //on xampp
         //protected const string apiKey = "3e64f6589b1bcc4326bc81d6a5b07e8b"; //on NAS old
         protected const string userName = "admin";
 

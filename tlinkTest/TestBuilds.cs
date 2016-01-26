@@ -25,9 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
@@ -67,7 +66,6 @@ namespace tlinkTest
         
         [Test]
         [Category("Changes Database")]
-        [MultipleAsserts]
         public void CreateABuild()
         {
             GeneralResult result = proxy.CreateBuild(PlanCalledAutomatedTesting.id,  string.Format("build {0}", DateTime.Now),
