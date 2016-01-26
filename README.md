@@ -24,4 +24,4 @@ The included testbench (to test the testlink API) requires an instance running o
  
 Note: 
 * So far only the smoke tests are available
-* The API key in tLinkTest/Testbase.cs needs to be changed accordingly
+* The API key in tLinkTest/Testbase.cs needs to be set accordingly
