@@ -93,7 +93,7 @@ namespace tlinkTest
                 Console.WriteLine("{0}: {1}",tp.id, tp.name);
         }
 
-        [Test, Ignore]
+        [Test]
         [ExpectedException(typeof(CookComputing.XmlRpc.XmlRpcServerException))]
         public void shouldFailBecauseOfInvalidURL()
         {
@@ -126,14 +126,13 @@ namespace tlinkTest
         }
 
         [Test, Sequential]
-        public void GetTestCase([Values(17908,17910)] int id, 
-                                [Values("10 G shock","Gamma Ray Storm") ] string name,
+        public void GetTestCase([Values("10 G shock","Gamma Ray Storm") ] string name,
                                 [Values("Handheld devices", "Handheld devices")] string testSuiteId)
         {
            List<TestCaseId> tcidList = proxy.GetTestCaseIDByName(name);
            Assert.AreEqual(1, tcidList.Count, "Call should return only 1 element");
             TestCaseId tcid = tcidList[0];
-           Assert.AreEqual(id, tcid.id);
+           Assert.AreNotEqual(0, tcid.id);
            Assert.AreEqual(name, tcid.name);
            Assert.AreEqual(testSuiteId, tcid.tsuite_name);
         }
