@@ -25,10 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
-
 
 namespace tlinkTest
 {
@@ -62,7 +60,6 @@ namespace tlinkTest
 
         }
         [Test]
-        [MultipleAsserts]
         public void GetTestProjectByName()
         {
             TestProject tp = proxy.GetProject(this.ApiTestProject.name);

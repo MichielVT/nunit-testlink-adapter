@@ -25,9 +25,8 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
@@ -66,7 +65,6 @@ namespace tlinkTest
             platformId = Platforms[0].id;           
         }
         [Test]
-        [MultipleAsserts]
         public void createAUniqueTestCase()
         {
             string uniqueName = string.Format("unitTest created at {0}", DateTime.Now);
@@ -93,7 +91,6 @@ namespace tlinkTest
         }
         [Test]
         [Category("Changes Database")]
-        [MultipleAsserts]
         public void createANewVersion()
         {
             string tcName ="externally created test case";
@@ -107,7 +104,6 @@ namespace tlinkTest
             Assert.AreEqual("createTestCase", result.operation);
 //            Assert.AreEqual(tcName, result.additionalInfo.new_name);
             Assert.AreEqual(true, result.additionalInfo.status_ok);
-            Assert.StartsWith(result.additionalInfo.msg, "Created new version");
             Assert.AreNotEqual(-1, result.additionalInfo.version_number); // that's a bug in testlink which has now a fix
             Assert.AreEqual(true, result.additionalInfo.has_duplicate);
         }
@@ -158,7 +154,6 @@ namespace tlinkTest
             Assert.AreEqual("createTestCase", result.operation);
             Assert.AreEqual("", result.additionalInfo.new_name);
             Assert.AreEqual(false, result.additionalInfo.status_ok);
-            Assert.StartsWith(result.additionalInfo.msg, "There's already a Test Case with this title");
             Assert.AreEqual(-1, result.additionalInfo.id);
             //Assert.AreEqual(1, result.additionalInfo.version_number);  // should ignore this
             Assert.AreEqual(true, result.additionalInfo.has_duplicate);
@@ -166,7 +161,6 @@ namespace tlinkTest
 
         [Test]
         [Category("Changes Database")]
-        [MultipleAsserts]
         public void createDuplicateNotNewVersion()
         {
             string tcName = "externally created test case";
@@ -179,7 +173,6 @@ namespace tlinkTest
             Assert.AreEqual("createTestCase", result.operation);
             //Assert.AreEqual(tcName, result.additionalInfo.new_name); - no longer true the new name has a date prefixed
             Assert.AreEqual(true, result.additionalInfo.status_ok);
-            Assert.StartsWith(result.additionalInfo.msg, "Created with title");
             Assert.AreNotEqual(-1, result.additionalInfo.id);
             Assert.AreEqual(1, result.additionalInfo.version_number);  
             Assert.AreEqual(true, result.additionalInfo.has_duplicate);
@@ -219,8 +212,6 @@ namespace tlinkTest
         }
         [Test][Ignore]
         [Category("Changes Database")]
-        [Annotation(Gallio.Model.AnnotationType.Info, "this was done to deal with a bug in the implementation")]
-        [MultipleAsserts]
         public void testExternalId()
         {
             string tcName = "externally created test case";

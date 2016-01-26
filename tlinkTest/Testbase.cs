@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 
 using System.Collections.Generic;
 using Meyn.TestLink;
-using MbUnit.Framework;
+using NUnit.Framework;
 
 
 namespace tlinkTest

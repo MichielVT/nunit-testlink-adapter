@@ -24,10 +24,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
 using System;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
