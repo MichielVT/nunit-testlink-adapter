@@ -22,4 +22,6 @@ The included testbench (to test the testlink API) requires an instance running o
         * "10 G shock"
         * "Gamma Ray Storm"
  
-Note: So far only the smoke tests are available
+Note: 
+* So far only the smoke tests are available
+* The API key in tLinkTest/Testbase.cs needs to be changed accordingly
