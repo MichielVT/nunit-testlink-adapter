@@ -113,15 +113,16 @@ namespace Meyn.TestLink
         /// get a test case id. If the test case does not exist then create one
         /// </summary>
         /// <param name="testName"></param>       
+        /// <param name="testDescription"></param>
         /// <returns>a valid test case id or 0 in case of failure</returns>
-        public int GetTestCaseId(string testName) 
+        public int GetTestCaseId(string testName, string testDescription) 
         {
             int TCaseId = getTestCaseByName(testName, testSuiteId);
             if (TCaseId == 0)
             {
                 // need to create test case
                 GeneralResult result = proxy.CreateTestCase(connectionData.UserId, testSuiteId, testName, testProjectId,
-                    "Automated TestCase", new TestStep[0], "", 0,
+                    testDescription, new TestStep[0], "", 0,
                     true, ActionOnDuplicatedName.Block, 2, 2);
                 TCaseId = result.additionalInfo.id;
                 int tcExternalId = result.additionalInfo.external_id;

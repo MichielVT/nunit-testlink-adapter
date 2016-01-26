@@ -210,6 +210,19 @@ namespace Meyn.TestLink.NUnitExport
             try
             {
                 string TestName = result.Name;
+                string MethodName = result.Test.MethodName;
+                if (!TestName.Equals(MethodName))
+                {
+                    
+                    /* In case of parameterized tests, result.Name only contains the name of the parameter. So add the name of the actual test (=methodname) also */
+                    TestName = MethodName + "." + TestName;
+                }
+                
+                string TestDescription = result.Description;
+                if (TestDescription == null)
+                {
+                    TestDescription = "";
+                }
 
                 if (adaptor.ConnectionValid == false)
                 {
@@ -220,8 +233,8 @@ namespace Meyn.TestLink.NUnitExport
 
                 try
                 {
-                    int TCaseId = adaptor.GetTestCaseId(TestName);
-
+                    int TCaseId = adaptor.GetTestCaseId(TestName, TestDescription);
+                    log.Error(string.Format("Exporting result for testcase {0}", result.Name));
                     if (TCaseId > 0)
                     {
                         sendResultToTestlink(result, tlfa, TCaseId);
