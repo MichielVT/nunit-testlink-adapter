@@ -10,8 +10,10 @@ The support for MBUnit is skipped and only NUnit is supported. Moreover, it impl
 ##Testbench
 
 The included testbench (to test the testlink API) requires an instance running on the local machine. The instance has to have following content:
-- First Testproject called "apiSandbox"
-- Second Testproject called "Empty TestProject"
-- Content of the first Testproject:
--- One testsuite called "business rules"
--- One testplan called "Automated Testing"
+* First Testproject called "apiSandbox"
+* Second Testproject called "Empty TestProject"
+* Content of the first Testproject:
+    * One testsuite called "business rules"
+    * One testplan called "Automated Testing"
+    * One platform called "OS/X"
+    * One platform called "Windows 95"
