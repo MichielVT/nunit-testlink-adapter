@@ -1,3 +1,6 @@
 *.bak
 Debug
 obj
+bin
+*.suo
+*.csproj.user
