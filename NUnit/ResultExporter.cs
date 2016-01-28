@@ -246,7 +246,7 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="tlfa"></param>
         private void reportResult(TestResult result, Meyn.TestLink.TestLinkFixtureAttribute tlfa)
         {
-
+            adaptor.ConnectionData = tlfa; // update the connection and retrieve  key base data from testlink
  
             try
             {
