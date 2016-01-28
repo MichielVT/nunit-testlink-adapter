@@ -248,6 +248,26 @@ namespace Meyn.TestLink
                 return existingValue;
         }
 
+        public void Validate()
+        {
+            Dictionary<string, string> validationItems = new Dictionary<string,string>(){
+                                                                    {"DevKey", devKey}, 
+                                                                    {"ProjectName", projectName}, 
+                                                                    {"TestPlan", testPlan},
+                                                                    {"url", url},
+                                                                    {"UserId", userId},
+                                                                };
+            
+            foreach (KeyValuePair<string, string> kvp in validationItems)
+            {
+                if ((kvp.Value == null) || (kvp.Value.Length == 0))
+                {
+                    throw new Exception(kvp.Key + " not set!");
+                }
+            }
+            
+        }
+
         public object Clone()
         {
             TestLinkFixtureAttribute tlfa = new TestLinkFixtureAttribute();

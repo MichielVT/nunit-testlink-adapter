@@ -227,7 +227,7 @@ namespace Meyn.TestLink.NUnitExport
                             reportResult(result, tlfa);
                         }
                     }
-                    log.WarnFormat(string.Format("Failed to record test case '{0}'", result.Name));
+                    log.ErrorFormat(string.Format("Failed to record test case '{0}'", result.Name));
                 }
             }
         }
@@ -378,10 +378,23 @@ namespace Meyn.TestLink.NUnitExport
                             tlfa.ConsiderConfigFile(Path.GetDirectoryName(path));
                         }
                         log.Info(string.Format("Found fixture attribute for test fixture: {0}", t.FullName));
-                        if (fixtures.ContainsKey(t.FullName))
-                            fixtures[t.FullName] = tlfa;
-                        else
-                            fixtures.Add(t.FullName, tlfa);
+                        try
+                        {
+                            tlfa.Validate();
+
+                            if (fixtures.ContainsKey(t.FullName))
+                            {
+                                fixtures[t.FullName] = tlfa;
+                            }
+                            else
+                            {
+                                fixtures.Add(t.FullName, tlfa);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            log.ErrorFormat("Configuration for {0} is wrong: {1}", t.FullName, e.Message);
+                        }
                     }
                 }
             }
