@@ -71,7 +71,7 @@ namespace Meyn.TestLink.NUnitExport
         {
             Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
             PatternLayout patternLayout = new PatternLayout();
-            patternLayout.ConversionPattern = "%date [%thread] %-5level [%F:%L] - %message%newline";
+            patternLayout.ConversionPattern = "%date [%thread] %-5level [%class.%method] - %message%newline";
             patternLayout.ActivateOptions();
             RollingFileAppender roller = new RollingFileAppender();
             roller.AppendToFile = false;
@@ -111,16 +111,10 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="result"></param>
         public void RunFinished(TestResult result)
         {
-            log.Debug(string.Format("RunFinished Description='{0}', Success={1}, Name='{2}', Message='{3}'", result.Description,
+            log.DebugFormat(string.Format("RunFinished Description='{0}', Success={1}, Name='{2}', Message='{3}'", result.Description,
             result.IsSuccess, result.Name, result.Message));
             //result.Name is the fully qualified dll path?
-
-
-            log.Info("Starting to export results to TestLink");
-
             processResults(result);
-            
-            log.Info("Completed exporting results to TestLink");
         }
 
  
@@ -190,7 +184,7 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="result"></param>
         private void processResults(TestResult result)
         {
-
+            log.DebugFormat("Process results for '{0}'", result.Name);
             if (IsDllPath(result.Name))
                 extractTestFixtureAttribute(result.Name);
 
@@ -199,6 +193,7 @@ namespace Meyn.TestLink.NUnitExport
 
                 foreach (TestResult subResult in result.Results)
                 {
+                    log.DebugFormat("Going recursive into '{0}'", subResult.Name);
                     processResults(subResult);
                 }
             }
@@ -239,8 +234,7 @@ namespace Meyn.TestLink.NUnitExport
 
         private bool IsDllPath(string path)
         {
-            log.DebugFormat("IsDllPath: '{0}'", path);
-            bool result = (path.ToLower().EndsWith(".dll")); 
+            bool result = (path.ToLower().EndsWith(".dll"));
             return result;
         }
 
