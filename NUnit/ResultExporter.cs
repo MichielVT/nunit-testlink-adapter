@@ -35,6 +35,7 @@ using log4net.Repository.Hierarchy;
 using log4net.Core;
 using log4net.Appender;
 using log4net.Layout;
+using log4net.Filter;
 
 namespace Meyn.TestLink.NUnitExport
 {
@@ -82,7 +83,17 @@ namespace Meyn.TestLink.NUnitExport
             roller.RollingStyle = RollingFileAppender.RollingMode.Size;
             roller.StaticLogFileName = true;
             roller.ActivateOptions();
+            ConsoleAppender console = new ConsoleAppender();
+            PatternLayout consolePatternLayout = new PatternLayout();
+            consolePatternLayout.ConversionPattern = "%date [Testlink Result Exporter] [%level] %message%newline";
+            consolePatternLayout.ActivateOptions();
+            LevelRangeFilter consoleLevelFilter = new LevelRangeFilter();
+            consoleLevelFilter.LevelMin = Level.Info;
+            consoleLevelFilter.LevelMax = Level.Fatal;
+            console.AddFilter(consoleLevelFilter);
+            console.Layout = consolePatternLayout;
             hierarchy.Root.AddAppender(roller);
+            hierarchy.Root.AddAppender(console);
             hierarchy.Root.Level = Level.All;
             hierarchy.Configured = true;
         }
@@ -96,7 +107,21 @@ namespace Meyn.TestLink.NUnitExport
             defaultTlfa.ConfigFile = defaultConfigFile;
             if (!(defaultTlfa.ConsiderConfigFile(Directory.GetCurrentDirectory())))
             {
+                log.Debug("Default config file not found!");
                 defaultTlfa = null;
+            }
+            else
+            {
+                try
+                {
+                    defaultTlfa.Validate();
+                }
+                catch (Exception e)
+                {
+                    log.WarnFormat("Parsing default config file failed: {1}. Ignoring the whole file!", e.Message);
+                    defaultTlfa = null;
+                }
+
             }
         }
 
@@ -111,10 +136,9 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="result"></param>
         public void RunFinished(TestResult result)
         {
-            log.DebugFormat(string.Format("RunFinished Description='{0}', Success={1}, Name='{2}', Message='{3}'", result.Description,
-            result.IsSuccess, result.Name, result.Message));
-            //result.Name is the fully qualified dll path?
+            log.InfoFormat("Test execution finished, starting exporter");
             processResults(result);
+            log.InfoFormat("Exporter finished!");
         }
 
  
@@ -131,8 +155,6 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="result"></param>
         public void TestFinished(TestResult result)
         {
-            log.Debug(String.Format("  Test Finished Description='{0}', Success={1}, Name='{2}', Message='{3}'", result.Description,
-            result.IsSuccess, result.Name, result.Message));
         }
 
         public void SuiteStarted(TestName testName)
@@ -140,10 +162,6 @@ namespace Meyn.TestLink.NUnitExport
         }
         public void SuiteFinished(TestResult result)
         {
-            //log.Debug(string.Format("SuiteFinished Description='{0}', Success={1}, Name='{2}', Message='{3}'", 
-                
-            //    result.Description,
-            //result.IsSuccess, result.Name, result.Message));
         }
         public void UnhandledException(Exception exception)
         {
@@ -210,13 +228,17 @@ namespace Meyn.TestLink.NUnitExport
                     {
                         reportResult(result, tlfa);
                     }
+                    else
+                    {
+                        log.Warn("Export skipped as enable parameter is set to false or missing");
+                    }
                 }
                 else
                 {
-                    TestLinkFixtureAttribute tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
-
-                    if (tlfa != null)
+                    TestLinkFixtureAttribute tlfa = null;
+                    if (defaultTlfa != null)
                     {
+                        tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
                         if (tlfa.TestSuite == null)
                         {
                             /* if testuite is not defined in default config file, take the Fullname as Testsuite name */
@@ -226,8 +248,15 @@ namespace Meyn.TestLink.NUnitExport
                         {
                             reportResult(result, tlfa);
                         }
+                        else
+                        {
+                            log.Warn("Export skipped as enable parameter is set to false or missing");
+                        }
                     }
-                    log.ErrorFormat(string.Format("Failed to record test case '{0}'", result.Name));
+                    else
+                    {
+                        log.ErrorFormat("Can't export result for {0}: Neither the corresponding TestLinkFixtureAttribute is available/correctly set nor a default config file can be found!", result.FullName, testFixtureName);
+                    }
                 }
             }
         }
@@ -268,7 +297,6 @@ namespace Meyn.TestLink.NUnitExport
                 if (adaptor.ConnectionValid == false)
                 {
                     log.WarnFormat(string.Format("Failed to export tesult for testcase {0}", result.Name));
-                    Console.WriteLine("Can't export results because invalid connection");
                     return;
                 }
 
@@ -279,12 +307,10 @@ namespace Meyn.TestLink.NUnitExport
                     if (TCaseId > 0)
                     {
                         sendResultToTestlink(result, tlfa, TCaseId);
-                        //Console.WriteLine("exported testcase '{0}'. ", TestName);
                     }
                 }
                 catch (TestLinkException tlex)
                 {
-                    Console.WriteLine("Failed to export testcase '{0}'. {1}", TestName, tlex.Message);
                     log.Error(string.Format("Failed to export testcase '{0}'. {1}", TestName, tlex.Message));
                 }
             }
@@ -334,7 +360,6 @@ namespace Meyn.TestLink.NUnitExport
             GeneralResult result = adaptor.RecordTheResult(TCaseId, status, notes.ToString());
             if (result.status != true)
             {
-                Console.WriteLine("Failed to export Result. Testlink reported: '{0}'", result.message);
                 log.WarnFormat(string.Format("Failed to export Result. Testlink reported: '{0}'", result.message));
             }
             else
@@ -377,7 +402,7 @@ namespace Meyn.TestLink.NUnitExport
                             /* try again with default config file */
                             tlfa.ConsiderConfigFile(Path.GetDirectoryName(path));
                         }
-                        log.Info(string.Format("Found fixture attribute for test fixture: {0}", t.FullName));
+                        log.Debug(string.Format("Found fixture attribute for test fixture: {0}", t.FullName));
                         try
                         {
                             tlfa.Validate();
@@ -393,7 +418,7 @@ namespace Meyn.TestLink.NUnitExport
                         }
                         catch (Exception e)
                         {
-                            log.ErrorFormat("Configuration for {0} is wrong: {1}", t.FullName, e.Message);
+                            log.WarnFormat("Unable to validate TestLinkFixtureAttribute for {0}: {1}", t.FullName, e.Message);
                         }
                     }
                 }

@@ -197,12 +197,10 @@ namespace Meyn.TestLink
                 configFile = Path.Combine(directory, configFile);
             }       
             
-            Console.WriteLine("Reading config file {0}", configFile);
             if (File.Exists(configFile) == false)
             {
                string absPath = Path.GetFullPath(configFile);
-               Console.WriteLine("config file not found in {0}", absPath);
-                return false;
+               return false;
             }
             
            
