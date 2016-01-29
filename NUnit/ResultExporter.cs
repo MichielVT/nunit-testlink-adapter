@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Text;
 using NUnit.Core.Extensibility;
 using NUnit.Core;
+using NUnit.Framework;
 using System.Reflection;
 using System.IO;
 using log4net;
@@ -109,19 +110,6 @@ namespace Meyn.TestLink.NUnitExport
             {
                 log.Debug("Default config file not found!");
                 defaultTlfa = null;
-            }
-            else
-            {
-                try
-                {
-                    defaultTlfa.Validate();
-                }
-                catch (Exception e)
-                {
-                    log.WarnFormat("Parsing default config file failed: {1}. Ignoring the whole file!", e.Message);
-                    defaultTlfa = null;
-                }
-
             }
         }
 
@@ -223,7 +211,12 @@ namespace Meyn.TestLink.NUnitExport
                 if (fixtures.ContainsKey(testFixtureName))
                 {
                     Meyn.TestLink.TestLinkFixtureAttribute tlfa = fixtures[testFixtureName];
-                    //tlfa.ConsiderConfigFile(); // ensure that a config file is read in
+                    
+                    if (tlfa.TestSuite == null)
+                    {
+                        /* if testuite is not defined in default config file, take the Fullname as Testsuite name */
+                        tlfa.TestSuite = extractTestFixture(result.FullName);
+                    }
                     if (tlfa.ExportEnabled)
                     {
                         reportResult(result, tlfa);
@@ -231,31 +224,6 @@ namespace Meyn.TestLink.NUnitExport
                     else
                     {
                         log.Warn("Export skipped as enable parameter is set to false or missing");
-                    }
-                }
-                else
-                {
-                    TestLinkFixtureAttribute tlfa = null;
-                    if (defaultTlfa != null)
-                    {
-                        tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
-                        if (tlfa.TestSuite == null)
-                        {
-                            /* if testuite is not defined in default config file, take the Fullname as Testsuite name */
-                            tlfa.TestSuite = extractTestFixture(result.FullName);
-                        }
-                        if (tlfa.ExportEnabled)
-                        {
-                            reportResult(result, tlfa);
-                        }
-                        else
-                        {
-                            log.Warn("Export skipped as enable parameter is set to false or missing");
-                        }
-                    }
-                    else
-                    {
-                        log.ErrorFormat("Can't export result for {0}: Neither the corresponding TestLinkFixtureAttribute is available/correctly set nor a default config file can be found!", result.FullName, testFixtureName);
                     }
                 }
             }
@@ -382,8 +350,8 @@ namespace Meyn.TestLink.NUnitExport
             {
                 DirectoryInfo di = new DirectoryInfo(".");
                 path = Path.Combine(di.FullName, path);
-            }       
-            
+            }
+
             log.Debug(string.Format("Loading assembly '{0}'", path));
             Assembly target = Assembly.LoadFile(path);
             Type[] allTypes = target.GetExportedTypes();
@@ -391,35 +359,50 @@ namespace Meyn.TestLink.NUnitExport
             foreach (Type t in allTypes)
             {
                 log.Debug(string.Format("Examining Type {0}", t.FullName));
+                TestLinkFixtureAttribute tlfa = null;
                 foreach (System.Attribute attribute in t.GetCustomAttributes(typeof(TestLinkFixtureAttribute), false))
                 {
-                    TestLinkFixtureAttribute tlfa = attribute as TestLinkFixtureAttribute;
-                    if (tlfa != null)
-                    {
-                        if (!tlfa.ConsiderConfigFile(Path.GetDirectoryName(path)))
-                        {
-                            tlfa.ConfigFile = defaultConfigFile;
-                            /* try again with default config file */
-                            tlfa.ConsiderConfigFile(Path.GetDirectoryName(path));
-                        }
-                        log.Debug(string.Format("Found fixture attribute for test fixture: {0}", t.FullName));
-                        try
-                        {
-                            tlfa.Validate();
+                    tlfa = attribute as TestLinkFixtureAttribute;
+                }
 
-                            if (fixtures.ContainsKey(t.FullName))
-                            {
-                                fixtures[t.FullName] = tlfa;
-                            }
-                            else
-                            {
-                                fixtures.Add(t.FullName, tlfa);
-                            }
-                        }
-                        catch (Exception e)
+                if (tlfa == null)
+                {
+                    if (defaultTlfa != null)
+                    {
+                        tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
+                        log.DebugFormat("Using default config file for test fixture: {0}", t.FullName);
+                    }
+                    else
+                    {
+                        log.ErrorFormat("Unable to export results for {0}: No default config file available!", t.FullName);
+                    }
+                }
+
+                if (tlfa != null)
+                {
+                    if (!tlfa.ConsiderConfigFile(Path.GetDirectoryName(path)))
+                    {
+                        tlfa.ConfigFile = defaultConfigFile;
+                        /* try again with default config file */
+                        tlfa.ConsiderConfigFile(Path.GetDirectoryName(path));
+                    }
+                    log.DebugFormat("Found fixture attribute for test fixture: {0}", t.FullName);
+                    try
+                    {
+                        tlfa.Validate();
+
+                        if (fixtures.ContainsKey(t.FullName))
                         {
-                            log.WarnFormat("Unable to validate TestLinkFixtureAttribute for {0}: {1}", t.FullName, e.Message);
+                            fixtures[t.FullName] = tlfa;
                         }
+                        else
+                        {
+                            fixtures.Add(t.FullName, tlfa);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        log.ErrorFormat("Unable to export results for {0}: {1}", t.FullName, e.Message);
                     }
                 }
             }
