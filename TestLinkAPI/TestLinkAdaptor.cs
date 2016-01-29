@@ -85,6 +85,7 @@ namespace Meyn.TestLink
         private int testBuildId;
         private int testPlanId;
         private int testProjectId;
+        private int platformId;
         private string platformName = string.Empty;
 
         /// <summary>
@@ -109,10 +110,24 @@ namespace Meyn.TestLink
         {
             GeneralResult result = null;
             if (ConnectionValid == true)
-                result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: platformName, notes: notes.ToString());
+                result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: platformName, notes: notes.ToString(), buildid: testBuildId);
             else
                 result = new GeneralResult("Invalid Connection", false);
             return result;
+        }
+
+        public int GetPlatformId(int testPlanId, string platformName)
+        {
+            List<TestPlatform> platforms = proxy.GetTestPlanPlatforms(testPlanId);
+
+            foreach (TestPlatform tp in platforms)
+            {
+                if (tp.name == platformName)
+                {
+                    return tp.id;
+                }
+            }
+            return 0;
         }
 
         /// <summary>
@@ -139,7 +154,7 @@ namespace Meyn.TestLink
                     return 0;
                 }
                 string externalId = string.Format("{0}-{1}", currentProject.prefix, tcExternalId);
-                int featureId = proxy.addTestCaseToTestPlan(currentProject.id, testPlanId, externalId, result.additionalInfo.version_number);
+                int featureId = proxy.addTestCaseToTestPlan(currentProject.id, testPlanId, externalId, result.additionalInfo.version_number, platformId);
                 if (featureId == 0)
                 {
                     Console.Error.WriteLine("Failed to assign TestCase {0} to testplan", testName);
@@ -179,7 +194,8 @@ namespace Meyn.TestLink
             bool projectDifferent = true;
             bool planDifferent = true;
             bool testSuiteDifferent = true;
-            bool testBuildDifferent = true;            
+            bool testBuildDifferent = true;
+            bool platformDifferent = true;
 
 
             if (newData == null)
@@ -209,7 +225,11 @@ namespace Meyn.TestLink
                                 if (connectionData.TestSuite == newData.TestSuite)
                                 {
                                     testSuiteDifferent = false;
-                                    testBuildDifferent = connectionData.Buildname != newData.Buildname;
+                                    if (connectionData.PlatformName == newData.PlatformName)
+                                    {
+                                        platformDifferent = false;
+                                        testBuildDifferent = connectionData.Buildname != newData.Buildname;
+                                    }
                                 }
                                 
                             }
@@ -228,7 +248,7 @@ namespace Meyn.TestLink
 
             
             if (basicConnectionValid)
-                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent, testBuildDifferent);
+                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent, testBuildDifferent, platformDifferent);
             
         }
         /// <summary>
@@ -262,7 +282,7 @@ namespace Meyn.TestLink
         /// <param name="newTestPlan"></param>
         /// <param name="newTestSuite"></param>
         /// <returns>true if data have been set up successfully</returns>
-        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite, bool newTestBuild)
+        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite, bool newTestBuild, bool newPlatform)
         {
             if (basicConnectionValid == false)
             {
@@ -316,7 +336,7 @@ namespace Meyn.TestLink
 
             if (newTestSuite)
             {
-                testSuiteId = GetTestSuiteId(testProjectId, connectionData.TestSuite);
+                testSuiteId = GetTestSuiteId(testProjectId, connectionData.TestSuite, true);
                 if (testSuiteId == 0)
                 {
                     log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
@@ -326,12 +346,29 @@ namespace Meyn.TestLink
             else if (testSuiteId == 0) // it was wrong and hasn't changed
                 return false;
 
+            if (newPlatform)
+            {
+                platformId = GetPlatformId(testPlanId, platformName);
+                if (platformId == 0)
+                {
+                    log.ErrorFormat("Platform '{0}' was not found project '{1}' or is not assigned to testplan '{2}'", connectionData.TestSuite, connectionData.ProjectName, connectionData.TestPlan);
+                    return false;
+                }
+            }
+            else if (platformId == 0) // it was wrong and hasn't changed
+                return false;
+
             if (newTestBuild)
             {
                 List<Build> builds;
                 Build buildToBeUsed = null;
 
                 builds = proxy.GetBuildsForTestPlan(testPlanId);
+                if (builds.Count == 0)
+                {
+                    log.ErrorFormat("No builds available for project '{0}' and testplan '{1}'!", connectionData.ProjectName, connectionData.TestPlan);
+                    return false;
+                }
                 if ((connectionData.Buildname != null) && (connectionData.Buildname != ""))
                 {
                     foreach (Build b in builds)
@@ -375,9 +412,11 @@ namespace Meyn.TestLink
         /// retrieve the testsuite id 
         /// </summary>
         /// <returns>0 or a valid test suite Id</returns>
-        private int GetTestSuiteId(int projectId, string testSuiteName)
+        private int GetTestSuiteId(int projectId, string testSuiteName, bool createIfNotExisting)
         {
             int testSuiteId = 0;
+            int parentTestSuiteId = 0;
+            GeneralResult result;
             string[] suites = testSuiteName.Split(new char[] { '.' });
             List<Meyn.TestLink.TestSuite> testSuites = proxy.GetFirstLevelTestSuitesForTestProject(projectId); //GetTestSuitesForTestPlan(testPlanId);
 
@@ -389,18 +428,33 @@ namespace Meyn.TestLink
                 {
                     if (ts.name == suites[i])
                     {
-                        testSuiteId = ts.id;
+                        parentTestSuiteId = testSuiteId = ts.id;
                         break;
                     }
                 }
                 if (testSuiteId == 0)
                 {
-                    break;
+                    if (createIfNotExisting)
+                    {
+                        result = proxy.CreateTestSuite(projectId, suites[i], "", parentTestSuiteId);
+                        if (result.status == false)
+                        {
+                            log.ErrorFormat("Error trying to create new testsuite {0} ({1}): {2}", suites[i], testSuiteName, result.message);
+                            return 0;
+                        }
+                        log.InfoFormat("Created new testsuite {0} ({1})", suites[i], testSuiteName);
+                        parentTestSuiteId = testSuiteId = result.id;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
                 }
                 testSuites = proxy.GetTestSuitesForTestSuite(testSuiteId);
             }
             return testSuiteId;
         }
+
         #endregion
     }
 }

@@ -254,6 +254,7 @@ namespace Meyn.TestLink
                                                                     {"TestPlan", testPlan},
                                                                     {"url", url},
                                                                     {"UserId", userId},
+                                                                    {"PlatformName", platformName}
                                                                 };
             
             foreach (KeyValuePair<string, string> kvp in validationItems)
