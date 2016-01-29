@@ -23,10 +23,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-using MbUnit.Framework;
-using MbUnit.Framework.ContractVerifiers;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
+
 
 namespace tlinkTest
 {   

@@ -35,8 +35,25 @@ namespace Meyn.TestLink
     /// this attribute is used for the various exporter adapters such as the Gallio and the NUnit test frameworks
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class TestLinkFixtureAttribute : System.Attribute
+    public class TestLinkFixtureAttribute : System.Attribute, ICloneable
     {
+        private string enabled;
+
+        public bool ExportEnabled
+        {
+            get { return (enabled.ToLower().Equals("true")); }
+            set { enabled = (value == true) ? "true" : "false"; }
+        }
+
+        private string buildName = null;
+        /// <summary>
+        /// the buildname to be used
+        /// </summary>
+        public string Buildname
+        {
+            get { return buildName; }
+            set { buildName = value; }
+        }
         private string url;
 
         /// <summary>
@@ -144,6 +161,8 @@ namespace Meyn.TestLink
                 && (other.testPlan.Equals(testPlan))
                 && (other.testSuite.Equals(testSuite))
                 && (other.url.Equals(url))
+                && (other.buildName.Equals(buildName))
+                && (other.enabled.Equals(enabled))
                 && (other.userId.Equals(userId)));
         }
 
@@ -155,6 +174,8 @@ namespace Meyn.TestLink
                  ^ testPlan.GetHashCode()
                  ^ testSuite.GetHashCode()
                  ^ url.GetHashCode()
+                 ^ buildName.GetHashCode()
+                 ^ enabled.GetHashCode()
                  ^ userId.GetHashCode());
         }
 
@@ -176,12 +197,10 @@ namespace Meyn.TestLink
                 configFile = Path.Combine(directory, configFile);
             }       
             
-            Console.WriteLine("Reading config file {0}", configFile);
             if (File.Exists(configFile) == false)
             {
                string absPath = Path.GetFullPath(configFile);
-               Console.WriteLine("config file not found in {0}", absPath);
-                return false;
+               return false;
             }
             
            
@@ -199,7 +218,8 @@ namespace Meyn.TestLink
             testSuite = updateAttributeFromConfigFile(doc, testSuite, "TestSuite");
             platformName = updateAttributeFromConfigFile(doc, platformName,"PlatformName");
             devKey = updateAttributeFromConfigFile(doc, devKey, "DevKey");
-            
+            enabled = updateAttributeFromConfigFile(doc, enabled, "enabled");
+            buildName = updateAttributeFromConfigFile(doc, buildName, "BuildName");
             return true;
         }
 
@@ -224,6 +244,42 @@ namespace Meyn.TestLink
                 return Node.Attributes["value"].Value;
             else
                 return existingValue;
+        }
+
+        public void Validate()
+        {
+            Dictionary<string, string> validationItems = new Dictionary<string,string>(){
+                                                                    {"DevKey", devKey}, 
+                                                                    {"ProjectName", projectName}, 
+                                                                    {"TestPlan", testPlan},
+                                                                    {"url", url},
+                                                                    {"UserId", userId},
+                                                                };
+            
+            foreach (KeyValuePair<string, string> kvp in validationItems)
+            {
+                if ((kvp.Value == null) || (kvp.Value.Length == 0))
+                {
+                    throw new Exception(kvp.Key + " not set!");
+                }
+            }
+            
+        }
+
+        public object Clone()
+        {
+            TestLinkFixtureAttribute tlfa = new TestLinkFixtureAttribute();
+            tlfa.devKey = devKey;
+            tlfa.configFile = configFile;
+            tlfa.projectName = projectName;
+            tlfa.testPlan = testPlan;
+            tlfa.testSuite = testSuite;
+            tlfa.url = url;
+            tlfa.buildName = buildName;
+            tlfa.enabled = enabled;
+            tlfa.userId = userId;
+
+            return tlfa;
         }
     }
 }

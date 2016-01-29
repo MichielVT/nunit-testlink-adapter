@@ -27,9 +27,8 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using MbUnit.Framework;
+using NUnit.Framework;
 using Meyn.TestLink;
-using Meyn.TestLink.GallioExporter;
 
 namespace tlinkTest
 {
@@ -74,13 +73,12 @@ namespace tlinkTest
         }
 
         [Test]
-        [MultipleAsserts]
         public void TestThatTestDBisProperlySetup()
         {
             Assert.IsNotNull(ApiTestProject, "Can't run tests. Project named {0} is not set up.", testProjectName);
             int empty = EmptyProjectId;
             Assert.AreNotEqual(0, empty, "Can't run tests. Empty Project named '{0}' is not set up.", emptyProjectName);
-            Assert.AreNotEqual(0, BusinessRulesTestSuiteId, "Setup failed to find test suite named '{0}'", testSuiteName2);
+            Assert.AreNotEqual(0, BusinessRulesTestSuiteId, "Setup failed to find test suite named '{0}'", testSuiteName1);
             Assert.IsNotNull(PlanCalledAutomatedTesting, "Can't run tests. need to have at least one testplan named {1} defined for project '{0}' .", testProjectName, theTestPlanName);
             List<TestPlatform> platforms = Platforms;
             Assert.IsNotEmpty(platforms, "Can't run tests. need to have at least one platform defined for project '{0}' .", testProjectName);
@@ -127,26 +125,23 @@ namespace tlinkTest
             Assert.Fail("Did not cause an exception");
         }
 
-        [Test]
-        [Row(5,  "10 G shock", "Handheld devices")]
-        [Row(7, "Gamma Ray Storm", "Handheld devices")]
-        public void GetTestCase(int id, string name, string testSuiteId)
+        [Test, Sequential]
+        public void GetTestCase([Values("10 G shock","Gamma Ray Storm") ] string name,
+                                [Values("Handheld devices", "Handheld devices")] string testSuiteId)
         {
            List<TestCaseId> tcidList = proxy.GetTestCaseIDByName(name);
            Assert.AreEqual(1, tcidList.Count, "Call should return only 1 element");
             TestCaseId tcid = tcidList[0];
-           Assert.AreEqual(id, tcid.id);
+           Assert.AreNotEqual(0, tcid.id);
            Assert.AreEqual(name, tcid.name);
            Assert.AreEqual(testSuiteId, tcid.tsuite_name);
         }
-        [Test]
-        [Row("joe", true)]
-        [Row("admin", true)]
-        [Row("Nonexistentuser", false)]
-        public void testUserExists(string userName, bool shouldExist)
+        [Test, Sequential]
+        public void testUserExists([Values("admin", "Nonexistentuser")] string userName, 
+                                    [Values(true, false)] bool shouldExist)
         {
             bool result = proxy.DoesUserExist(userName);
-            Assert.AreEqual<bool>(shouldExist, result, "tried user {0} and got result {1}", userName, shouldExist);
+            Assert.AreEqual(shouldExist, result, "tried user {0} and got result {1}", userName, shouldExist);
         }
 
     }

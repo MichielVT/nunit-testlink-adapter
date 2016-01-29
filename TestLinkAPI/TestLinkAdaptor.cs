@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-//using log4net;
+using log4net;
 
 namespace Meyn.TestLink
 {
@@ -39,7 +39,13 @@ namespace Meyn.TestLink
     public class TestLinkAdaptor
     {
 
-        //private static readonly ILog log = LogManager.GetLogger(typeof(TestLinkAdaptor));
+        private readonly ILog log;
+
+
+        public TestLinkAdaptor(ILog logger)
+        {
+            log = logger;
+        }
 
         private TestLinkFixtureAttribute connectionData;
 
@@ -76,6 +82,7 @@ namespace Meyn.TestLink
         private TestProject currentProject;
 
         private int testSuiteId;
+        private int testBuildId;
         private int testPlanId;
         private int testProjectId;
         private string platformName = string.Empty;
@@ -112,15 +119,16 @@ namespace Meyn.TestLink
         /// get a test case id. If the test case does not exist then create one
         /// </summary>
         /// <param name="testName"></param>       
+        /// <param name="testDescription"></param>
         /// <returns>a valid test case id or 0 in case of failure</returns>
-        public int GetTestCaseId(string testName) 
+        public int GetTestCaseId(string testName, string testDescription) 
         {
             int TCaseId = getTestCaseByName(testName, testSuiteId);
             if (TCaseId == 0)
             {
                 // need to create test case
                 GeneralResult result = proxy.CreateTestCase(connectionData.UserId, testSuiteId, testName, testProjectId,
-                    "Automated TestCase", new TestStep[0], "", 0,
+                    testDescription, new TestStep[0], "", 0,
                     true, ActionOnDuplicatedName.Block, 2, 2);
                 TCaseId = result.additionalInfo.id;
                 int tcExternalId = result.additionalInfo.external_id;
@@ -170,11 +178,13 @@ namespace Meyn.TestLink
             bool devKeyDifferent = true;
             bool projectDifferent = true;
             bool planDifferent = true;
-            bool testSuiteDifferent = true;            
+            bool testSuiteDifferent = true;
+            bool testBuildDifferent = true;            
+
 
             if (newData == null)
             {
-                //log.Error("No TestLinkFixture detected");
+                log.Error("No TestLinkFixture detected");
                 basicConnectionValid = false;
                 projectDataValid = false;
                 connectionData = null;
@@ -196,7 +206,11 @@ namespace Meyn.TestLink
                             if (connectionData.TestPlan == newData.TestPlan)
                             {
                                 planDifferent = false;
-                                testSuiteDifferent = connectionData.TestSuite != newData.TestSuite;
+                                if (connectionData.TestSuite == newData.TestSuite)
+                                {
+                                    testSuiteDifferent = false;
+                                    testBuildDifferent = connectionData.Buildname != newData.Buildname;
+                                }
                                 
                             }
                         }
@@ -214,7 +228,7 @@ namespace Meyn.TestLink
 
             
             if (basicConnectionValid)
-                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent);
+                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent, testBuildDifferent);
             
         }
         /// <summary>
@@ -235,7 +249,7 @@ namespace Meyn.TestLink
             catch (TestLinkException tlex)
             {
                 lastException = tlex;
-                Console.WriteLine("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, url);
+                log.ErrorFormat("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, url);
                 return false;
             }
             return true;
@@ -248,13 +262,14 @@ namespace Meyn.TestLink
         /// <param name="newTestPlan"></param>
         /// <param name="newTestSuite"></param>
         /// <returns>true if data have been set up successfully</returns>
-        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite)
+        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite, bool newTestBuild)
         {
             if (basicConnectionValid == false)
             {
                 testProjectId = 0;
                 testPlanId = 0;
                 testSuiteId = 0;
+                testBuildId = 0;
                 return false;
             }
             if (newProject)
@@ -273,7 +288,7 @@ namespace Meyn.TestLink
                 {
                     testPlanId = 0;
                     testSuiteId = 0;
-                    Console.WriteLine("Test Project '{0}' was not found in TestLink", connectionData.ProjectName);
+                    log.ErrorFormat("Test Project '{0}' was not found in TestLink", connectionData.ProjectName);
                     return false;
                 }
             }
@@ -292,7 +307,7 @@ namespace Meyn.TestLink
                 if (testPlanId == 0)
                 {
                     testSuiteId = 0;
-                    Console.WriteLine("Test plan '{0}' was not found in project '{1}'", connectionData.TestPlan, connectionData.ProjectName);
+                    log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", connectionData.TestPlan, connectionData.ProjectName);
                     return false;
                 }
             }
@@ -304,13 +319,52 @@ namespace Meyn.TestLink
                 testSuiteId = GetTestSuiteId(testProjectId, connectionData.TestSuite);
                 if (testSuiteId == 0)
                 {
-                    Console.WriteLine("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
+                    log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
                     return false;
                 }
             }
             else if (testSuiteId == 0) // it was wrong and hasn't changed
                 return false;
 
+            if (newTestBuild)
+            {
+                List<Build> builds;
+                Build buildToBeUsed = null;
+
+                builds = proxy.GetBuildsForTestPlan(testPlanId);
+                if ((connectionData.Buildname != null) && (connectionData.Buildname != ""))
+                {
+                    foreach (Build b in builds)
+                    {
+                        if (b.name == connectionData.Buildname)
+                        {
+                            testBuildId = b.id;
+                            buildToBeUsed = b;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    /* use latest build */
+                    testBuildId = builds[builds.Count - 1].id;
+                    buildToBeUsed = builds[builds.Count - 1];
+                    log.Debug("Using default/latest build: " + buildToBeUsed.name);
+                }
+                if (buildToBeUsed == null)
+                {
+                    log.Error("Build " + connectionData.Buildname + " not found!");
+                    return false;
+                }
+                else if (!buildToBeUsed.active || !buildToBeUsed.is_open)
+                {
+                    log.Error("Build " + connectionData.Buildname + " not active/open!");
+                    return false;
+                }
+
+            }
+            else if (testBuildId == 0) // it was wrong and hasn't changed
+                return false;
            
             return true;
         }
@@ -324,14 +378,27 @@ namespace Meyn.TestLink
         private int GetTestSuiteId(int projectId, string testSuiteName)
         {
             int testSuiteId = 0;
+            string[] suites = testSuiteName.Split(new char[] { '.' });
             List<Meyn.TestLink.TestSuite> testSuites = proxy.GetFirstLevelTestSuitesForTestProject(projectId); //GetTestSuitesForTestPlan(testPlanId);
-            // testsuite must exist. Currently no way of creating them
-            foreach (Meyn.TestLink.TestSuite ts in testSuites)
-                if (ts.name == testSuiteName)
+
+            for (int i = 0; i < suites.Length; i++)
+            {
+                testSuiteId = 0;
+                // testsuite must exist. Currently no way of creating them
+                foreach (Meyn.TestLink.TestSuite ts in testSuites)
                 {
-                    testSuiteId = ts.id;
+                    if (ts.name == suites[i])
+                    {
+                        testSuiteId = ts.id;
+                        break;
+                    }
+                }
+                if (testSuiteId == 0)
+                {
                     break;
                 }
+                testSuites = proxy.GetTestSuitesForTestSuite(testSuiteId);
+            }
             return testSuiteId;
         }
         #endregion
