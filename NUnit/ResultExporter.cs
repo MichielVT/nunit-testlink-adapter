@@ -60,7 +60,8 @@ namespace Meyn.TestLink.NUnitExport
         TestLinkAdaptor adaptor;
 
         private string currentTestOutput  = "";
-        private const string defaultConfigFile = "tlinkconfig-default.xml";
+        private string defaultConfigFile = "tlinkconfig-default.xml";
+        private const string defaultConfigFileEnvironmentVariable = "TL_DEFAULT_CONFIG_FILE";
         private TestLinkFixtureAttribute defaultTlfa;
 
         /// <summary>
@@ -101,14 +102,28 @@ namespace Meyn.TestLink.NUnitExport
 
         public ResultExporter()
         {
+            string envDefaultConfigFile;
+            string directory;
             SetupLogger();
             log = LogManager.GetLogger(typeof(TestLinkAdaptor));
             adaptor = new TestLinkAdaptor(log);
             defaultTlfa = new TestLinkFixtureAttribute();
-            defaultTlfa.ConfigFile = defaultConfigFile;
-            if (!(defaultTlfa.ConsiderConfigFile(Directory.GetCurrentDirectory())))
+
+            envDefaultConfigFile = Environment.GetEnvironmentVariable(defaultConfigFileEnvironmentVariable);
+            if (envDefaultConfigFile != null)
             {
-                log.Debug("Default config file not found!");
+                defaultConfigFile = envDefaultConfigFile;
+                directory = "";
+            }
+            else
+            {
+                
+                directory = Directory.GetCurrentDirectory();
+            }
+            defaultTlfa.ConfigFile = defaultConfigFile;
+            if (!(defaultTlfa.ConsiderConfigFile(directory)))
+            {
+                log.Debug("Default config file " + defaultConfigFile + " not found!");
                 defaultTlfa = null;
             }
         }
@@ -370,11 +385,11 @@ namespace Meyn.TestLink.NUnitExport
                     if (defaultTlfa != null)
                     {
                         tlfa = (TestLinkFixtureAttribute)defaultTlfa.Clone();
-                        log.DebugFormat("Using default config file for test fixture: {0}", t.FullName);
+                        log.DebugFormat("Using default config " + defaultConfigFile + " file for test fixture: {0}", t.FullName);
                     }
                     else
                     {
-                        log.ErrorFormat("Unable to export results for {0}: No default config file available!", t.FullName);
+                        log.ErrorFormat("Unable to export results for {0}: No default config file (" + defaultConfigFile + ") available!", t.FullName);
                     }
                 }
 
