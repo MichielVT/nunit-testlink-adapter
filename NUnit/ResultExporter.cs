@@ -302,12 +302,8 @@ namespace Meyn.TestLink.NUnitExport
 
                 try
                 {
-                    int TCaseId = adaptor.GetTestCaseId(TestName, TestDescription);
                     log.Error(string.Format("Exporting result for testcase {0}", result.Name));
-                    if (TCaseId > 0)
-                    {
-                        sendResultToTestlink(result, tlfa, TCaseId);
-                    }
+                    sendResultToTestlink(result, tlfa, TestName);
                 }
                 catch (TestLinkException tlex)
                 {
@@ -331,7 +327,7 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="tlfa"></param>
         /// <param name="testPlanId"></param>
         /// <param name="TCaseId"></param>
-        private void sendResultToTestlink(TestResult tcResult , TestLinkFixtureAttribute tlfa,  int TCaseId)
+        private void sendResultToTestlink(TestResult tcResult , TestLinkFixtureAttribute tlfa,  string testCaseName)
         {
             TestCaseResultStatus status = TestCaseResultStatus.Blocked;
 
@@ -357,7 +353,7 @@ namespace Meyn.TestLink.NUnitExport
                 case ResultState.Error: status = TestCaseResultStatus.Fail; break;                  
             }
 
-            GeneralResult result = adaptor.RecordTheResult(TCaseId, status, notes.ToString());
+            GeneralResult result = adaptor.RecordTheResult(testCaseName, tlfa.TestSuite, status, notes.ToString());
             if (result.status != true)
             {
                 log.WarnFormat(string.Format("Failed to export Result. Testlink reported: '{0}'", result.message));

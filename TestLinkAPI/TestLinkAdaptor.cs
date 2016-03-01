@@ -83,7 +83,7 @@ namespace Meyn.TestLink
         List<TestPlan> AllTestPlans = new List<TestPlan>();
         private TestProject currentProject;
 
-        private int testSuiteId;
+        private Dictionary<string, int> testSuiteDirectory = new Dictionary<string,int>();
         private int testBuildId;
         private int testPlanId;
         private int testProjectId;
@@ -93,21 +93,30 @@ namespace Meyn.TestLink
         /// <summary>
         /// record a result with testlink;
         /// </summary>
-        /// <param name="testCaseId"></param>
-        /// <param name="status"></param>
-        /// <param name="notes"></param>
         /// <returns></returns>
-        public GeneralResult RecordTheResult(int testCaseId, TestCaseResultStatus status, string notes)
+        public GeneralResult RecordTheResult(string testName, string testSuite, TestCaseResultStatus status, string notes)
         {
             GeneralResult result = null;
             if (ConnectionValid == true)
-                result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: projectData.Platform, notes: notes.ToString(), buildid: testBuildId);
+            {
+                int testCaseId = AddTestIfNotExisting(testName, testSuite);
+                if (testCaseId == 0)
+                {
+                    result = new GeneralResult("Unable to find/add testcase", false);
+                }
+                else
+                {
+                    result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: projectData.Platform, notes: notes.ToString(), buildid: testBuildId);
+                }
+            }
             else
+            {
                 result = new GeneralResult("Invalid Connection", false);
+            }
             return result;
         }
 
-        public int GetPlatformId(int testPlanId, string platformName)
+        private int GetPlatformId(int testPlanId, string platformName)
         {
             List<TestPlatform> platforms = proxy.GetTestPlanPlatforms(testPlanId);
 
@@ -121,19 +130,27 @@ namespace Meyn.TestLink
             return 0;
         }
 
-        /// <summary>
-        /// get a test case id. If the test case does not exist then create one
-        /// </summary>
-        /// <param name="testName"></param>       
-        /// <param name="testDescription"></param>
-        /// <returns>a valid test case id or 0 in case of failure</returns>
-        public int GetTestCaseId(string testName, string testDescription) 
+        public int AddTestIfNotExisting(string testName, string testSuite, string testDescription = "")
         {
+            int testSuiteId;
+
+            if (testSuiteDirectory.ContainsKey(testSuite))
+            {
+                testSuiteId = testSuiteDirectory[testSuite];
+            }
+            else
+            {
+                testSuiteId = GetTestSuiteId(testProjectId, testSuite, true);
+                testSuiteDirectory.Add(testSuite, testSuiteId);
+            }
+            
             int TCaseId = getTestCaseByName(testName, testSuiteId);
+            GeneralResult result;
+
             if (TCaseId == 0)
             {
                 // need to create test case
-                GeneralResult result = proxy.CreateTestCase(connectionData.User, testSuiteId, testName, testProjectId,
+                result = proxy.CreateTestCase(connectionData.User, testSuiteId, testName, testProjectId,
                     testDescription, new TestStep[0], "", 0,
                     true, ActionOnDuplicatedName.Block, 2, 2);
                 TCaseId = result.additionalInfo.id;
@@ -152,6 +169,7 @@ namespace Meyn.TestLink
                     return 0;
                 }
             }
+
             return TCaseId;
         }
 
@@ -231,7 +249,6 @@ namespace Meyn.TestLink
             {
                 testProjectId = 0;
                 testPlanId = 0;
-                testSuiteId = 0;
                 testBuildId = 0;
                 projectDataValid = false;
                 return false;
@@ -258,7 +275,6 @@ namespace Meyn.TestLink
                 if (testProjectId == 0)
                 {
                     testPlanId = 0;
-                    testSuiteId = 0;
                     log.ErrorFormat("Test Project '{0}' was not found in TestLink", newProjectData.Project);
                     return false;
                 }
@@ -277,24 +293,11 @@ namespace Meyn.TestLink
                     }
                 if (testPlanId == 0)
                 {
-                    testSuiteId = 0;
                     log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", newProjectData.Testplan, newProjectData.Project);
                     return false;
                 }
             }
             else if (testPlanId == 0) // it was wrong and hasn't changed
-                return false;
-
-            if (projectData.Testsuite != newProjectData.Testsuite)
-            {
-                testSuiteId = GetTestSuiteId(testProjectId, newProjectData.Testsuite, true);
-                if (testSuiteId == 0)
-                {
-                    log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", newProjectData.Testsuite, newProjectData.Project);
-                    return false;
-                }
-            }
-            else if (testSuiteId == 0) // it was wrong and hasn't changed
                 return false;
 
             if (projectData.Platform != newProjectData.Platform)
@@ -376,7 +379,6 @@ namespace Meyn.TestLink
             for (int i = 0; i < suites.Length; i++)
             {
                 testSuiteId = 0;
-                // testsuite must exist. Currently no way of creating them
                 foreach (Meyn.TestLink.TestSuite ts in testSuites)
                 {
                     if (ts.name == suites[i])
