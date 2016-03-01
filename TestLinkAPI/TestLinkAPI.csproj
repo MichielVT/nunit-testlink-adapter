@@ -53,7 +53,9 @@
     <Compile Include="TestLink.cs" />
     <Compile Include="ITestLink.cs" />
     <Compile Include="TestLinkAdaptor.cs" />
+    <Compile Include="TestLinkConnectionData.cs" />
     <Compile Include="TestLinkException.cs" />
+    <Compile Include="TestLinkProjectData.cs" />
     <Compile Include="TL_Data.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -63,10 +65,6 @@
     <ProjectReference Include="..\external\XmlRpcNet_Src\src\xmlrpc.csproj">
       <Project>{1B4B0A58-0AFB-4090-91DD-18912CC7DE65}</Project>
       <Name>xmlrpc</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\TestLinkFixture\TestLinkFixture.csproj">
-      <Project>{B412DDEB-7308-4FCF-8C6A-1EAF38F90DED}</Project>
-      <Name>TestLinkFixture</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

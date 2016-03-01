@@ -47,7 +47,9 @@ namespace Meyn.TestLink
             log = logger;
         }
 
-        private TestLinkFixtureAttribute connectionData;
+        private TestLinkProjectData projectData;
+
+        private TestLinkConnectionData connectionData;
 
         //private bool connectionValid = false;
         /// <summary>
@@ -86,17 +88,6 @@ namespace Meyn.TestLink
         private int testPlanId;
         private int testProjectId;
         private int platformId;
-        private string platformName = string.Empty;
-
-        /// <summary>
-        /// sets up connection and retrieves basic data
-        /// </summary>
-        public TestLinkFixtureAttribute ConnectionData
-        {
-            get { return connectionData; }
-            set { updateConnectionData(value);}
-        }
-
 
         #region recording the result
         /// <summary>
@@ -110,7 +101,7 @@ namespace Meyn.TestLink
         {
             GeneralResult result = null;
             if (ConnectionValid == true)
-                result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: platformName, notes: notes.ToString(), buildid: testBuildId);
+                result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: projectData.Platform, notes: notes.ToString(), buildid: testBuildId);
             else
                 result = new GeneralResult("Invalid Connection", false);
             return result;
@@ -142,7 +133,7 @@ namespace Meyn.TestLink
             if (TCaseId == 0)
             {
                 // need to create test case
-                GeneralResult result = proxy.CreateTestCase(connectionData.UserId, testSuiteId, testName, testProjectId,
+                GeneralResult result = proxy.CreateTestCase(connectionData.User, testSuiteId, testName, testProjectId,
                     testDescription, new TestStep[0], "", 0,
                     true, ActionOnDuplicatedName.Block, 2, 2);
                 TCaseId = result.additionalInfo.id;
@@ -187,80 +178,36 @@ namespace Meyn.TestLink
         /// try to update the connection with a minimum of API calls to testlink
         /// </summary>
         /// <param name="newData"></param>
-        private void updateConnectionData(TestLinkFixtureAttribute newData)
+        public bool UpdateConnectionData(TestLinkConnectionData newData)
         {
-            bool connectionDifferent = true;
-            bool devKeyDifferent = true;
-            bool projectDifferent = true;
-            bool planDifferent = true;
-            bool testSuiteDifferent = true;
-            bool testBuildDifferent = true;
-            bool platformDifferent = true;
-
-
             if (newData == null)
             {
                 log.Error("No TestLinkFixture detected");
                 basicConnectionValid = false;
-                projectDataValid = false;
                 connectionData = null;
-                return;
+                return false;
             }
 
-
-            if (connectionData != null)
+            if (connectionData == null)
             {
-                if (newData.Url == connectionData.Url)
-                {
-                    connectionDifferent = false;
-                    if (newData.DevKey == connectionData.DevKey)
-                    {
-                        devKeyDifferent = false;
-                        if (connectionData.ProjectName == newData.ProjectName)
-                        {
-                            projectDifferent = false;
-                            if (connectionData.TestPlan == newData.TestPlan)
-                            {
-                                planDifferent = false;
-                                if (connectionData.TestSuite == newData.TestSuite)
-                                {
-                                    testSuiteDifferent = false;
-                                    if (connectionData.PlatformName == newData.PlatformName)
-                                    {
-                                        platformDifferent = false;
-                                        testBuildDifferent = connectionData.Buildname != newData.Buildname;
-                                    }
-                                }
-                                
-                            }
-                        }
-                    }
-                }
+                connectionData = new TestLinkConnectionData();
             }
-            connectionData = newData;
-            platformName = connectionData.PlatformName;
 
             //attempt a new connection if url or devkey are different
-            if (connectionDifferent || devKeyDifferent)
+            if (!connectionData.Equals(newData))
             {
-                basicConnectionValid = basicConnection(newData.DevKey, newData.Url);
+                basicConnectionValid = basicConnection(newData);
             }
-
-            
-            if (basicConnectionValid)
-                projectDataValid = updateData(projectDifferent, planDifferent, testSuiteDifferent, testBuildDifferent, platformDifferent);
-            
+            connectionData = newData;
+            return basicConnectionValid;
         }
         /// <summary>
         /// create the basic connection and test it out
         /// </summary>
-        /// <param name="devKey"></param>
-        /// <param name="url"></param>
-        /// <returns>true if the connection is valid</returns>
-        private bool basicConnection(string devKey, string url)
+        private bool basicConnection(TestLinkConnectionData connection)
         {
             lastException = null;
-            proxy = new TestLink(connectionData.DevKey, connectionData.Url);
+            proxy = new TestLink(connection.DevKey, connection.Url);
             AllTestPlans = new List<TestPlan>();
             try
             {
@@ -269,7 +216,7 @@ namespace Meyn.TestLink
             catch (TestLinkException tlex)
             {
                 lastException = tlex;
-                log.ErrorFormat("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, url);
+                log.ErrorFormat("Failed to connect to TestLink at {1}. Message was '{0}'", tlex.Message, connection.Url);
                 return false;
             }
             return true;
@@ -278,11 +225,7 @@ namespace Meyn.TestLink
         /// <summary>
         /// update selected bits of the testlink fixture data
         /// </summary>
-        /// <param name="newProject"></param>
-        /// <param name="newTestPlan"></param>
-        /// <param name="newTestSuite"></param>
-        /// <returns>true if data have been set up successfully</returns>
-        private bool updateData(bool newProject, bool newTestPlan, bool newTestSuite, bool newTestBuild, bool newPlatform)
+        public bool UpdateProjectData(TestLinkProjectData newProjectData)
         {
             if (basicConnectionValid == false)
             {
@@ -290,36 +233,44 @@ namespace Meyn.TestLink
                 testPlanId = 0;
                 testSuiteId = 0;
                 testBuildId = 0;
+                projectDataValid = false;
                 return false;
             }
-            if (newProject)
+            if (projectData == null)
+            {
+                projectData = new TestLinkProjectData();
+            }
+
+            if (projectData.Project != newProjectData.Project)
             {
                 testProjectId = 0;
                 AllTestPlans = new List<TestPlan>();
                 foreach (TestProject project in allProjects)
-                    if (project.name == connectionData.ProjectName)
+                {
+                    if (project.name == newProjectData.Project)
                     {
                         currentProject = project;
                         testProjectId = project.id;
                         AllTestPlans = proxy.GetProjectTestPlans(project.id);
                         break;
                     }
+                }
                 if (testProjectId == 0)
                 {
                     testPlanId = 0;
                     testSuiteId = 0;
-                    log.ErrorFormat("Test Project '{0}' was not found in TestLink", connectionData.ProjectName);
+                    log.ErrorFormat("Test Project '{0}' was not found in TestLink", newProjectData.Project);
                     return false;
                 }
             }
             else if (testProjectId == 0) // it was wrong and hasn't changed
                 return false;
 
-            if (newTestPlan)
+            if (projectData.Testplan != newProjectData.Testplan)
             {
                 testPlanId = 0;
                 foreach (TestPlan tp in AllTestPlans)
-                    if (tp.name == connectionData.TestPlan)
+                    if (tp.name == newProjectData.Testplan)
                     {
                         testPlanId = tp.id;
                         break;
@@ -327,38 +278,38 @@ namespace Meyn.TestLink
                 if (testPlanId == 0)
                 {
                     testSuiteId = 0;
-                    log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", connectionData.TestPlan, connectionData.ProjectName);
+                    log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", newProjectData.Testplan, newProjectData.Project);
                     return false;
                 }
             }
             else if (testPlanId == 0) // it was wrong and hasn't changed
                 return false;
 
-            if (newTestSuite)
+            if (projectData.Testsuite != newProjectData.Testsuite)
             {
-                testSuiteId = GetTestSuiteId(testProjectId, connectionData.TestSuite, true);
+                testSuiteId = GetTestSuiteId(testProjectId, newProjectData.Testsuite, true);
                 if (testSuiteId == 0)
                 {
-                    log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", connectionData.TestSuite, connectionData.ProjectName);
+                    log.ErrorFormat("Test suite '{0}' was not found in project '{1}'", newProjectData.Testsuite, newProjectData.Project);
                     return false;
                 }
             }
             else if (testSuiteId == 0) // it was wrong and hasn't changed
                 return false;
 
-            if (newPlatform)
+            if (projectData.Platform != newProjectData.Platform)
             {
-                platformId = GetPlatformId(testPlanId, platformName);
+                platformId = GetPlatformId(testPlanId, newProjectData.Platform);
                 if (platformId == 0)
                 {
-                    log.ErrorFormat("Platform '{0}' was not found project '{1}' or is not assigned to testplan '{2}'", connectionData.TestSuite, connectionData.ProjectName, connectionData.TestPlan);
+                    log.ErrorFormat("Platform '{0}' was not found project '{1}' or is not assigned to testplan '{2}'", newProjectData.Platform, newProjectData.Project, newProjectData.Testplan);
                     return false;
                 }
             }
             else if (platformId == 0) // it was wrong and hasn't changed
                 return false;
 
-            if (newTestBuild)
+            if (projectData.Build != newProjectData.Build)
             {
                 List<Build> builds;
                 Build buildToBeUsed = null;
@@ -366,14 +317,14 @@ namespace Meyn.TestLink
                 builds = proxy.GetBuildsForTestPlan(testPlanId);
                 if (builds.Count == 0)
                 {
-                    log.ErrorFormat("No builds available for project '{0}' and testplan '{1}'!", connectionData.ProjectName, connectionData.TestPlan);
+                    log.ErrorFormat("No builds available for project '{0}' and testplan '{1}'!", newProjectData.Project, newProjectData.Testplan);
                     return false;
                 }
-                if ((connectionData.Buildname != null) && (connectionData.Buildname != ""))
+                if ((newProjectData.Build != null) && (newProjectData.Build != ""))
                 {
                     foreach (Build b in builds)
                     {
-                        if (b.name == connectionData.Buildname)
+                        if (b.name == newProjectData.Build)
                         {
                             testBuildId = b.id;
                             buildToBeUsed = b;
@@ -390,20 +341,22 @@ namespace Meyn.TestLink
                 }
                 if (buildToBeUsed == null)
                 {
-                    log.Error("Build " + connectionData.Buildname + " not found!");
+                    log.Error("Build " + newProjectData.Build + " not found!");
                     return false;
                 }
                 else if (!buildToBeUsed.active || !buildToBeUsed.is_open)
                 {
-                    log.Error("Build " + connectionData.Buildname + " not active/open!");
+                    log.Error("Build " + newProjectData.Build + " not active/open!");
                     return false;
                 }
 
             }
             else if (testBuildId == 0) // it was wrong and hasn't changed
                 return false;
-           
-            return true;
+
+            projectData = newProjectData;
+            projectDataValid = true;
+            return projectDataValid;
         }
 
            

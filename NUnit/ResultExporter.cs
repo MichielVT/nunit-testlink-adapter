@@ -250,6 +250,16 @@ namespace Meyn.TestLink.NUnitExport
             return result;
         }
 
+        private TestLinkConnectionData GetConnectionData(TestLinkFixtureAttribute tlfa)
+        {
+            return new TestLinkConnectionData(tlfa.Url, tlfa.DevKey, tlfa.UserId);
+        }
+
+        private TestLinkProjectData GetProjectData(TestLinkFixtureAttribute tlfa)
+        {
+            return new TestLinkProjectData(tlfa.Buildname, tlfa.ProjectName, tlfa.TestPlan, tlfa.TestSuite, tlfa.PlatformName);
+        }
+
         /// <summary>
         /// gather all the necessary information prior to 
         /// reporting the results to testlink.
@@ -258,8 +268,15 @@ namespace Meyn.TestLink.NUnitExport
         /// <param name="tlfa"></param>
         private void reportResult(TestResult result, Meyn.TestLink.TestLinkFixtureAttribute tlfa)
         {
-            adaptor.ConnectionData = tlfa; // update the connection and retrieve  key base data from testlink
- 
+            if (!adaptor.UpdateConnectionData(GetConnectionData(tlfa)))
+            {
+                log.Error("Connection error!");
+                return;
+            }
+            if (!adaptor.UpdateProjectData(GetProjectData(tlfa)))
+            {
+                log.Error("Error setting project data");
+            }
             try
             {
                 string TestName = result.Name;
