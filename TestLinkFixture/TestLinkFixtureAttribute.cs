@@ -211,15 +211,15 @@ namespace Meyn.TestLink
             //  - it is present, and
             //  - not set in attribute, or
             //  - override is set
-            url = updateAttributeFromConfigFile(doc, url, "url"); 
-            projectName = updateAttributeFromConfigFile(doc, projectName, "ProjectName");
+            url = updateAttributeFromConfigFile(doc, url, "URL"); 
+            projectName = updateAttributeFromConfigFile(doc, projectName, "Project");
             userId = updateAttributeFromConfigFile(doc,userId, "UserId");
             testPlan = updateAttributeFromConfigFile(doc, testPlan, "TestPlan");
             testSuite = updateAttributeFromConfigFile(doc, testSuite, "TestSuite");
-            platformName = updateAttributeFromConfigFile(doc, platformName,"PlatformName");
+            platformName = updateAttributeFromConfigFile(doc, platformName,"Platform");
             devKey = updateAttributeFromConfigFile(doc, devKey, "DevKey");
-            enabled = updateAttributeFromConfigFile(doc, enabled, "enabled");
-            buildName = updateAttributeFromConfigFile(doc, buildName, "BuildName");
+            enabled = updateAttributeFromConfigFile(doc, enabled, "Enabled");
+            buildName = updateAttributeFromConfigFile(doc, buildName, "Build");
             return true;
         }
 
