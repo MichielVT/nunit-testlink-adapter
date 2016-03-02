@@ -30,6 +30,13 @@ using System.Collections.Generic;
 
 namespace Meyn.TestLink
 {
+
+    public interface TL_Element
+    {
+        int Id { get; }
+        string Name { get; }
+    }
+
     /// <summary>
     /// base class for all response classes from the TL Api
     /// </summary>
@@ -164,7 +171,7 @@ namespace Meyn.TestLink
     /// <summary>
     /// The object returned from Testlinkt when requesting an attachment
     /// </summary>
-    public class Attachment: TL_Data
+    public class Attachment : TL_Data, TL_Element
     {
         public readonly int id;
         public readonly string file_type;
@@ -183,11 +190,25 @@ namespace Meyn.TestLink
             string s = (string)data["content"];
             content = System.Convert.FromBase64String(s);
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
     /// <summary>
     /// Build information returned by Testlink
     /// </summary>
-    public class Build : TL_Data
+    public class Build : TL_Data, TL_Element
     {
         /// <summary>
         /// build ID
@@ -222,6 +243,20 @@ namespace Meyn.TestLink
             testplan_id = toInt(data, "testplan_id");
             is_open = toInt(data, "is_open") == 1;
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
 
    
@@ -354,6 +389,7 @@ namespace Meyn.TestLink
             urgency = toInt(data, "urgency");
             priority = toInt(data, "priority");
         }
+
         /// <summary>
         /// This is used for the call GetTestCasesForTestPlan
         /// using the returned list from TestLink, generate a list of data
@@ -491,7 +527,7 @@ namespace Meyn.TestLink
     /// </summary>
     /// <remarks>This is different from other calls that return TestCases </remarks>
 
-    public class TestCase : TL_Data
+    public class TestCase : TL_Data, TL_Element
     {
         public readonly int id;
         public readonly string externalid;
@@ -555,6 +591,20 @@ namespace Meyn.TestLink
                     steps.Add(new TestStep(aStepDatum));
             
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
 
     /// <summary>
@@ -727,7 +777,7 @@ namespace Meyn.TestLink
     /// represent a folder in the test specification tree
     /// 
     /// </summary>
-    public class TestSuite : TL_Data
+    public class TestSuite : TL_Data, TL_Element
     {
         /// <summary>
         /// internal primary key
@@ -763,6 +813,20 @@ namespace Meyn.TestLink
             nodeTypeId = toInt(data, "node_type_id");
             nodeOrder = toInt(data, "node_order");
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
 
     /// <summary>
@@ -880,7 +944,7 @@ namespace Meyn.TestLink
     /// <summary>
     /// represent a test project object in testlink
     /// </summary>
-    public class TestProject : TL_Data
+    public class TestProject : TL_Data, TL_Element
     {
         /// <summary>
         /// internal id
@@ -946,12 +1010,26 @@ namespace Meyn.TestLink
             tc_counter = toInt(data, "tc_counter");
             name = (string)data["name"];
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
 
     /// <summary>
     /// represent a test plan
     /// </summary>
-    public class TestPlan : TL_Data
+    public class TestPlan : TL_Data, TL_Element
     {
         /// <summary>
         /// True if thest plan is currently active
@@ -995,6 +1073,20 @@ namespace Meyn.TestLink
             open = toInt(data, "is_open") == 1;
             is_public = toInt(data, "is_public") == 1;
         }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
     /// <summary>
     /// view of test case identifiers returned by the api call GetTestCaseIdByName
@@ -1033,7 +1125,7 @@ namespace Meyn.TestLink
     /// <summary>
     /// Represents a platform against which a test result can be recorded
     /// </summary>
-    public class TestPlatform : TL_Data
+    public class TestPlatform : TL_Data, TL_Element
     {
         /// <summary>
         /// primary key
@@ -1056,7 +1148,21 @@ namespace Meyn.TestLink
             id = toInt(data, "id");
             name = (string)data["name"];
             notes = (string)data["notes"];
-        }        
+        }
+
+        #region TL_Element Members
+
+        public int Id
+        {
+            get { return id; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        #endregion
     }
     /// <summary>
     /// summary results for the execution of a testplan.
