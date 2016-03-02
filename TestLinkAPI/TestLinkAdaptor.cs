@@ -38,6 +38,14 @@ namespace Meyn.TestLink
     /// <remarks>This class is used by test exporters for automated testing frameworks such as Gallio or NUnit</remarks>
     public class TestLinkAdaptor
     {
+        enum ProjectData
+        { 
+            TestPlan,
+            TestSuite,
+            Build,
+            Platform,
+            Project
+        }
 
         private readonly ILog log;
 
@@ -61,6 +69,8 @@ namespace Meyn.TestLink
         /// </summary>
         private bool projectDataValid = false;
 
+        private Dictionary<string, int> testSuiteDirectory = new Dictionary<string, int>();
+
         /// <summary>
         /// can we record test results
         /// </summary>
@@ -79,15 +89,6 @@ namespace Meyn.TestLink
         /// the proxy to the current server
         /// </summary>
         Meyn.TestLink.TestLink proxy = null;
-        List<TestProject> allProjects = new List<TestProject>();
-        List<TestPlan> AllTestPlans = new List<TestPlan>();
-        private TestProject currentProject;
-
-        private Dictionary<string, int> testSuiteDirectory = new Dictionary<string,int>();
-        private int testBuildId;
-        private int testPlanId;
-        private int testProjectId;
-        private int platformId;
 
         #region recording the result
         /// <summary>
@@ -106,7 +107,7 @@ namespace Meyn.TestLink
                 }
                 else
                 {
-                    result = proxy.ReportTCResult(testCaseId, testPlanId, status, platformName: projectData.Platform, notes: notes.ToString(), buildid: testBuildId);
+                    result = proxy.ReportTCResult(testCaseId, projectData.TestplanId, status, platformName: projectData.Platform, notes: notes.ToString(), buildid: projectData.BuildId);
                 }
             }
             else
@@ -140,7 +141,7 @@ namespace Meyn.TestLink
             }
             else
             {
-                testSuiteId = GetTestSuiteId(testProjectId, testSuite, true);
+                testSuiteId = GetTestSuiteId(projectData.ProjectId, testSuite, true);
                 testSuiteDirectory.Add(testSuite, testSuiteId);
             }
             
@@ -150,7 +151,7 @@ namespace Meyn.TestLink
             if (TCaseId == 0)
             {
                 // need to create test case
-                result = proxy.CreateTestCase(connectionData.User, testSuiteId, testName, testProjectId,
+                result = proxy.CreateTestCase(connectionData.User, testSuiteId, testName, projectData.ProjectId,
                     testDescription, new TestStep[0], "", 0,
                     true, ActionOnDuplicatedName.Block, 2, 2);
                 TCaseId = result.additionalInfo.id;
@@ -161,8 +162,8 @@ namespace Meyn.TestLink
                     Console.Error.WriteLine(" Reason {0}", result.message);
                     return 0;
                 }
-                string externalId = string.Format("{0}-{1}", currentProject.prefix, tcExternalId);
-                int featureId = proxy.addTestCaseToTestPlan(currentProject.id, testPlanId, externalId, result.additionalInfo.version_number, platformId);
+                string externalId = string.Format("{0}-{1}", projectData.ProjectPrefix, tcExternalId);
+                int featureId = proxy.addTestCaseToTestPlan(projectData.ProjectId, projectData.TestplanId, externalId, result.additionalInfo.version_number, projectData.PlatformId);
                 if (featureId == 0)
                 {
                     Console.Error.WriteLine("Failed to assign TestCase {0} to testplan", testName);
@@ -226,10 +227,9 @@ namespace Meyn.TestLink
         {
             lastException = null;
             proxy = new TestLink(connection.DevKey, connection.Url);
-            AllTestPlans = new List<TestPlan>();
             try
             {
-                allProjects = proxy.GetProjects();
+                proxy.SayHello();
             }
             catch (TestLinkException tlex)
             {
@@ -240,129 +240,42 @@ namespace Meyn.TestLink
             return true;
         }
 
-        /// <summary>
-        /// update selected bits of the testlink fixture data
-        /// </summary>
-        public bool UpdateProjectData(TestLinkProjectData newProjectData)
+        private int UpdateDirectory<T>(IDictionary<string, int> directory, List<T> list, string key)
         {
-            if (basicConnectionValid == false)
+            if (!directory.ContainsKey(key))
             {
-                testProjectId = 0;
-                testPlanId = 0;
-                testBuildId = 0;
+                foreach (TL_Element e in list)
+                {
+                    if (e.Name == key)
+                    {
+                        directory.Add(key, e.Id);
+                        return e.Id;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        public bool UpdateProjectData(string projectName, string testplanName, string platformName, string buildName)
+        {
+            if (projectData == null)
+            {
+                projectData = new TestLinkProjectData(proxy);
+            }
+            try
+            {
+                projectData.UpdateData(projectName, testplanName, platformName, buildName);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Error updating project data: " + ex.Message);
                 projectDataValid = false;
                 return false;
             }
-            if (projectData == null)
-            {
-                projectData = new TestLinkProjectData();
-            }
-
-            if (projectData.Project != newProjectData.Project)
-            {
-                testProjectId = 0;
-                AllTestPlans = new List<TestPlan>();
-                foreach (TestProject project in allProjects)
-                {
-                    if (project.name == newProjectData.Project)
-                    {
-                        currentProject = project;
-                        testProjectId = project.id;
-                        AllTestPlans = proxy.GetProjectTestPlans(project.id);
-                        break;
-                    }
-                }
-                if (testProjectId == 0)
-                {
-                    testPlanId = 0;
-                    log.ErrorFormat("Test Project '{0}' was not found in TestLink", newProjectData.Project);
-                    return false;
-                }
-            }
-            else if (testProjectId == 0) // it was wrong and hasn't changed
-                return false;
-
-            if (projectData.Testplan != newProjectData.Testplan)
-            {
-                testPlanId = 0;
-                foreach (TestPlan tp in AllTestPlans)
-                    if (tp.name == newProjectData.Testplan)
-                    {
-                        testPlanId = tp.id;
-                        break;
-                    }
-                if (testPlanId == 0)
-                {
-                    log.ErrorFormat("Test plan '{0}' was not found in project '{1}'", newProjectData.Testplan, newProjectData.Project);
-                    return false;
-                }
-            }
-            else if (testPlanId == 0) // it was wrong and hasn't changed
-                return false;
-
-            if (projectData.Platform != newProjectData.Platform)
-            {
-                platformId = GetPlatformId(testPlanId, newProjectData.Platform);
-                if (platformId == 0)
-                {
-                    log.ErrorFormat("Platform '{0}' was not found project '{1}' or is not assigned to testplan '{2}'", newProjectData.Platform, newProjectData.Project, newProjectData.Testplan);
-                    return false;
-                }
-            }
-            else if (platformId == 0) // it was wrong and hasn't changed
-                return false;
-
-            if (projectData.Build != newProjectData.Build)
-            {
-                List<Build> builds;
-                Build buildToBeUsed = null;
-
-                builds = proxy.GetBuildsForTestPlan(testPlanId);
-                if (builds.Count == 0)
-                {
-                    log.ErrorFormat("No builds available for project '{0}' and testplan '{1}'!", newProjectData.Project, newProjectData.Testplan);
-                    return false;
-                }
-                if ((newProjectData.Build != null) && (newProjectData.Build != ""))
-                {
-                    foreach (Build b in builds)
-                    {
-                        if (b.name == newProjectData.Build)
-                        {
-                            testBuildId = b.id;
-                            buildToBeUsed = b;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    /* use latest build */
-                    testBuildId = builds[builds.Count - 1].id;
-                    buildToBeUsed = builds[builds.Count - 1];
-                    log.Debug("Using default/latest build: " + buildToBeUsed.name);
-                }
-                if (buildToBeUsed == null)
-                {
-                    log.Error("Build " + newProjectData.Build + " not found!");
-                    return false;
-                }
-                else if (!buildToBeUsed.active || !buildToBeUsed.is_open)
-                {
-                    log.Error("Build " + newProjectData.Build + " not active/open!");
-                    return false;
-                }
-
-            }
-            else if (testBuildId == 0) // it was wrong and hasn't changed
-                return false;
-
-            projectData = newProjectData;
             projectDataValid = true;
-            return projectDataValid;
+            return true;
         }
-
-           
+   
         
         /// <summary>
         /// retrieve the testsuite id 

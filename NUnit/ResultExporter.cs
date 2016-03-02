@@ -255,11 +255,6 @@ namespace Meyn.TestLink.NUnitExport
             return new TestLinkConnectionData(tlfa.Url, tlfa.DevKey, tlfa.UserId);
         }
 
-        private TestLinkProjectData GetProjectData(TestLinkFixtureAttribute tlfa)
-        {
-            return new TestLinkProjectData(tlfa.Buildname, tlfa.ProjectName, tlfa.TestPlan, tlfa.TestSuite, tlfa.PlatformName);
-        }
-
         /// <summary>
         /// gather all the necessary information prior to 
         /// reporting the results to testlink.
@@ -273,7 +268,7 @@ namespace Meyn.TestLink.NUnitExport
                 log.Error("Connection error!");
                 return;
             }
-            if (!adaptor.UpdateProjectData(GetProjectData(tlfa)))
+            if (!adaptor.UpdateProjectData(tlfa.ProjectName, tlfa.TestPlan, tlfa.PlatformName, tlfa.Buildname))
             {
                 log.Error("Error setting project data");
             }
